@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="하불실적관리">
+<meta name="theme-color" content="#00b8a9">
+<title>동부계약관리팀 · 하불실적관리</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --teal:     #00b8a9;
+  --teal-d:   #009e91;
+  --teal-l:   #e0f7f5;
+  --teal-ll:  #f0fdfb;
+  --navy:     #1a2744;
+  --navy2:    #253358;
+  --gold:     #f5a623;
+  --gold-l:   #fff8ec;
+  --red:      #e63946;
+  --red-l:    #fff0f0;
+  --green:    #2a9d5c;
+  --green-l:  #edfaf3;
+  --gray50:   #f8fafc;
+  --gray100:  #f1f5f9;
+  --gray200:  #e2e8f0;
+  --gray300:  #cbd5e1;
+  --gray400:  #94a3b8;
+  --gray500:  #64748b;
+  --gray700:  #334155;
+  --gray900:  #0f172a;
+  --white:    #ffffff;
+  --radius:   16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --shadow:   0 2px 12px rgba(0,184,169,.10), 0 1px 3px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 32px rgba(0,184,169,.15), 0 2px 8px rgba(0,0,0,.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--gray50);
+  color: var(--gray700);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══ HEADER ══════════════════════════════════════════ */
+.app-header {
+  background: var(--navy);
+  padding: 0 20px;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 2px 16px rgba(0,0,0,.25);
+}
+.header-logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-d));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,184,169,.4);
+}
+.header-logo h1 {
+  color: #fff; font-size: 15px; font-weight: 800;
+  letter-spacing: -.3px; line-height: 1.2;
+}
+.header-logo p {
+  color: rgba(255,255,255,.45); font-size: 10.5px; font-weight: 400;
+}
+.header-right { display: flex; align-items: center; gap: 8px; }
+.rec-badge {
+  background: rgba(0,184,169,.2); border: 1px solid rgba(0,184,169,.3);
+  color: var(--teal); font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+}
+
+/* ══ BOTTOM NAV ═══════════════════════════════════════ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: var(--white);
+  border-top: 1px solid var(--gray200);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+.nav-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 4px 8px;
+  color: var(--gray400); font-size: 10px; font-weight: 600;
+  cursor: pointer; border: none; background: none; font-family: inherit;
+  transition: color .15s;
+  gap: 3px;
+}
+.nav-tab .ni { font-size: 20px; line-height: 1; }
+.nav-tab.active { color: var(--teal); }
+.nav-tab.active .ni { filter: drop-shadow(0 0 4px rgba(0,184,169,.4)); }
+
+/* ══ MAIN ════════════════════════════════════════════ */
+.main-wrap {
+  max-width: 640px; margin: 0 auto;
+  padding: 16px 16px 100px;
+}
+
+/* ══ VIEW PAGES ══════════════════════════════════════ */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ══ PAGE TITLE ══════════════════════════════════════ */
+.page-title {
+  font-size: 20px; font-weight: 900; color: var(--navy);
+  letter-spacing: -.5px; margin-bottom: 4px;
+}
+.page-sub { font-size: 12.5px; color: var(--gray400); margin-bottom: 20px; }
+
+/* ══ CARD ════════════════════════════════════════════ */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gray200);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.card-inner { padding: 18px 18px; }
+
+.section-label {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+}
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--teal); color: #fff;
+  font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.step-num.done { background: var(--green); }
+.step-num.gray { background: var(--gray300); }
+.section-label h3 {
+  font-size: 14px; font-weight: 800; color: var(--navy);
+}
+.section-label span { font-size: 11.5px; color: var(--gray400); }
+
+/* ══ KPI ROW ══════════════════════════════════════════ */
+.kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.kpi-box {
+  background: var(--white); border: 1px solid var(--gray200);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+.kpi-box::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.kpi-box.teal::before   { background: var(--teal); }
+.kpi-box.gold::before   { background: var(--gold); }
+.kpi-box.green::before  { background: var(--green); }
+.kpi-box.navy::before   { background: var(--navy); }
+.kpi-label { font-size: 10px; font-weight: 700; color: var(--gray400); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 6px; }
+.kpi-val   { font-size: 22px; font-weight: 900; color: var(--navy); font-family: 'DM Mono', monospace; line-height: 1; }
+.kpi-sub   { font-size: 10.5px; color: var(--gray400); margin-top: 3px; }
+
+/* ══ BRANCH GRID ══════════════════════════════════════ */
+.branch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.branch-btn {
+  border: 2px solid var(--gray200); border-radius: var(--radius-sm);
+  padding: 11px 8px; font-size: 13px; font-weight: 600;
+  font-family: inherit; background: var(--white);
+  color: var(--gray500); cursor: pointer; transition: all .15s; text-align: center;
+}
+.branch-btn:hover  { border-color: var(--teal); color: var(--teal); }
+.branch-btn.active { border-color: var(--teal); background: var(--teal); color: #fff; }
+
+/* ══ SELECT / INPUT ═══════════════════════════════════ */
+.field-row { display: flex; gap: 8px; align-items: center; }
+.field-row label { font-size: 12px; font-weight: 700; color: var(--gray700); white-space: nowrap; }
+.sel, .inp {
+  flex: 1; border: 1.5px solid var(--gray200); border-radius: var(--radius-xs);
+  padding: 9px 12px; font-size: 13px; font-family: inherit;
+  color: var(--navy); background: var(--white); outline: none;
+  transition: border-color .15s; -webkit-appearance: none;
+}
+.sel:focus, .inp:focus { border-color: var(--teal); }
+
+/* ══ DROP ZONE ════════════════════════════════════════ */
+.drop-zone {
+  border: 2px dashed var(--gray200); border-radius: var(--radius-sm);
+  padding: 28px 20px; text-align: center; cursor: pointer;
+  transition: all .2s; background: var(--gray50); position: relative;
+}
+.drop-zone:hover, .drop-zone.over { border-color: var(--teal); background: var(--teal-ll); }
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop-icon { font-size: 30px; margin-bottom: 8px; display: block; }
+.drop-zone p { font-size: 13px; color: var(--gray400); line-height: 1.6; }
+.drop-zone strong { color: var(--navy); }
+
+.file-pill {
+  display: none; background: var(--teal-l); border-radius: var(--radius-xs);
+  padding: 10px 14px; margin-top: 10px; font-size: 12px;
+  align-items: center; gap: 8px;
+}
+.file-pill.show { display: flex; }
+.file-pill .fn { font-weight: 700; color: var(--navy); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ══ BUTTONS ══════════════════════════════════════════ */
+.btn {
+  border: none; border-radius: var(--radius-sm); font-family: inherit;
+  font-size: 14px; font-weight: 800; cursor: pointer;
+  transition: all .15s; display: flex; align-items: center;
+  justify-content: center; gap: 6px; width: 100%; padding: 14px;
+  letter-spacing: -.2px;
+}
+.btn-teal {
+  background: var(--teal); color: #fff;
+  box-shadow: 0 4px 16px rgba(0,184,169,.35);
+}
+.btn-teal:hover { background: var(--teal-d); }
+.btn-teal:active { transform: scale(.98); }
+.btn-teal:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-navy {
+  background: var(--navy); color: #fff;
+  box-shadow: 0 4px 12px rgba(26,39,68,.3);
+}
+.btn-navy:hover { background: var(--navy2); }
+.btn-green {
+  background: var(--green); color: #fff;
+  box-shadow: 0 4px 12px rgba(42,157,92,.3);
+}
+.btn-sm {
+  width: auto; padding: 7px 14px; font-size: 12px; border-radius: var(--radius-xs);
+  background: var(--teal-l); color: var(--teal); border: 1px solid rgba(0,184,169,.2);
+}
+.btn-sm:hover { background: var(--teal); color: #fff; }
+.btn-ghost {
+  width: auto; padding: 7px 14px; font-size: 12px; border-radius: var(--radius-xs);
+  background: var(--gray100); color: var(--gray500);
+}
+
+/* ══ PROGRESS ════════════════════════════════════════ */
+.prog-wrap { display: none; margin-top: 14px; }
+.prog-wrap.show { display: block; }
+.pbar-bg { background: var(--gray100); border-radius: 99px; height: 6px; overflow: hidden; margin-bottom: 6px; }
+.pbar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--teal), #00e5d3); width: 0; transition: width .4s ease; }
+.plabel { font-size: 11.5px; color: var(--gray400); text-align: center; }
+
+/* ══ STEPS ════════════════════════════════════════════ */
+.step-list { display: flex; flex-direction: column; }
+.step-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--gray100);
+}
+.step-item:last-child { border-bottom: none; }
+.snum {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gray100); color: var(--gray400);
+  font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px; transition: all .25s;
+}
+.snum.done   { background: var(--teal); color: #fff; }
+.snum.active { background: var(--gold); color: #fff; }
+.stxt strong { font-size: 13px; color: var(--navy); display: block; font-weight: 700; }
+.stxt span   { font-size: 11.5px; color: var(--gray400); }
+
+/* ══ AI LOG ═══════════════════════════════════════════ */
+.ai-log {
+  background: var(--gray900); border-radius: var(--radius-xs);
+  padding: 12px 14px; max-height: 160px; overflow-y: auto;
+  font-family: 'DM Mono', monospace; font-size: 11.5px; line-height: 1.9;
+  margin-top: 12px;
+}
+.ll   { color: rgba(255,255,255,.35); }
+.ll.ok   { color: #34d399; }
+.ll.info { color: #60a5fa; }
+.ll.warn { color: #fbbf24; }
+.ll.head { color: #5eead4; font-weight: 600; }
+
+/* ══ MAP GRID ════════════════════════════════════════ */
+.map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.map-item {
+  border: 1px solid var(--gray200); border-radius: var(--radius-xs);
+  padding: 8px 10px; font-size: 11.5px;
+  background: var(--gray50);
+}
+.map-item.ok   { border-color: #6ee7b7; background: var(--green-l); }
+.map-item.warn { border-color: #fcd34d; background: var(--gold-l); }
+.map-src { color: var(--gray400); font-size: 10.5px; margin-bottom: 2px; }
+.map-dst { font-weight: 700; color: var(--navy); display: flex; align-items: center; gap: 3px; font-size: 12px; }
+.map-dst::before { content: '→'; color: var(--teal); }
+
+/* ══ RESULT BANNER ════════════════════════════════════ */
+.result-banner {
+  background: linear-gradient(135deg, var(--teal), var(--teal-d));
+  border-radius: var(--radius-sm); padding: 16px 18px;
+  color: #fff; margin-bottom: 14px;
+  display: none;
+}
+.result-banner.show { display: block; }
+.rb-title { font-size: 13px; font-weight: 700; opacity: .8; margin-bottom: 4px; }
+.rb-val   { font-size: 28px; font-weight: 900; font-family: 'DM Mono', monospace; line-height: 1; }
+.rb-sub   { font-size: 11.5px; opacity: .7; margin-top: 4px; }
+.rb-grid  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+.rb-item  { text-align: center; }
+.rb-item .rl { font-size: 10px; opacity: .7; margin-bottom: 3px; }
+.rb-item .rv { font-size: 15px; font-weight: 800; font-family: 'DM Mono'; }
+
+/* ══ TABLE CARD ═══════════════════════════════════════ */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead tr { background: var(--navy); }
+thead th {
+  padding: 10px 12px; text-align: left;
+  color: rgba(255,255,255,.75); font-size: 10.5px;
+  font-weight: 700; letter-spacing: .4px; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--gray100); }
+tbody tr:hover { background: var(--teal-ll); }
+tbody td { padding: 9px 12px; color: var(--gray700); white-space: nowrap; }
+td.mono { font-family: 'DM Mono', monospace; }
+td.num  { text-align: right; font-family: 'DM Mono'; font-weight: 600; color: var(--navy); }
+td.bold { font-weight: 700; color: var(--navy); }
+
+/* ══ BADGE ════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 700;
+  font-family: 'Noto Sans KR';
+}
+.b-teal   { background: var(--teal-l);  color: var(--teal-d); }
+.b-gold   { background: var(--gold-l);  color: #92400e; }
+.b-green  { background: var(--green-l); color: var(--green); }
+.b-red    { background: var(--red-l);   color: var(--red); }
+.b-navy   { background: var(--gray100); color: var(--navy); }
+.b-gray   { background: var(--gray100); color: var(--gray500); }
+
+/* ══ FILTER STRIP ════════════════════════════════════ */
+.filter-row {
+  display: flex; gap: 6px; align-items: center;
+  background: var(--white); border: 1px solid var(--gray200);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  margin-bottom: 12px; overflow-x: auto;
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+.filter-row label { font-size: 11.5px; font-weight: 700; color: var(--gray500); white-space: nowrap; }
+.fsel {
+  border: 1.5px solid var(--gray200); border-radius: var(--radius-xs);
+  padding: 5px 8px; font-size: 12px; font-family: inherit;
+  color: var(--navy); background: var(--white); outline: none;
+  -webkit-appearance: none; cursor: pointer;
+}
+.fsel:focus { border-color: var(--teal); }
+.finp {
+  flex: 1; min-width: 120px;
+  border: 1.5px solid var(--gray200); border-radius: var(--radius-xs);
+  padding: 5px 8px; font-size: 12px; font-family: inherit;
+  color: var(--navy); outline: none;
+}
+.finp:focus { border-color: var(--teal); }
+.fsep { width: 1px; height: 18px; background: var(--gray200); flex-shrink: 0; }
+
+/* ══ CHART BARS ══════════════════════════════════════ */
+.chart-wrap { padding: 0 4px; }
+.chart-cols { display: flex; align-items: flex-end; gap: 5px; height: 120px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.bar-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 1px; width: 100%; justify-content: flex-start; height: 110px; }
+.bar-seg {
+  width: 100%; border-radius: 3px 3px 0 0; min-height: 2px;
+  transition: height .7s cubic-bezier(.34,1.56,.64,1);
+  position: relative; cursor: pointer;
+}
+.bar-seg:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--navy); color: #fff; font-size: 11px;
+  padding: 4px 8px; border-radius: 5px; white-space: nowrap; z-index: 10;
+  font-family: 'Noto Sans KR';
+}
+.bar-lbl { font-size: 9.5px; color: var(--gray400); }
+.chart-legend {
+  display: flex; justify-content: center; gap: 14px;
+  margin-top: 8px; flex-wrap: wrap;
+}
+.leg-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--gray500); }
+.leg-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* ══ PARTNER LIST ════════════════════════════════════ */
+.rank-list { display: flex; flex-direction: column; }
+.rank-row  {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--gray100);
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-no { font-size: 11px; font-weight: 800; color: var(--gray300); min-width: 18px; text-align: center; }
+.rank-no.top { color: var(--teal); }
+.rank-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-branch { font-size: 10.5px; color: var(--gray400); }
+.rank-bar-wrap { width: 64px; height: 4px; background: var(--gray100); border-radius: 2px; overflow: hidden; }
+.rank-bar { height: 100%; border-radius: 2px; background: var(--teal); }
+.rank-val { font-size: 12px; font-weight: 800; color: var(--navy); font-family: 'DM Mono'; text-align: right; min-width: 60px; }
+
+/* ══ EMPTY ════════════════════════════════════════════ */
+.empty { text-align: center; padding: 40px 20px; }
+.empty .ei { font-size: 36px; margin-bottom: 10px; opacity: .4; }
+.empty p { font-size: 13px; color: var(--gray400); line-height: 1.7; }
+
+/* ══ DIVIDER ══════════════════════════════════════════ */
+.divider { height: 1px; background: var(--gray100); margin: 14px 0; }
+
+/* ══ TAG ROW ══════════════════════════════════════════ */
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ══ TOAST ════════════════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--navy); color: #fff;
+  padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  opacity: 0; transition: all .3s; z-index: 9999;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══ CONFIRM BANNER ═══════════════════════════════════ */
+.confirm-bar {
+  background: var(--teal-l); border: 1.5px solid rgba(0,184,169,.3);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  display: none; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 12px;
+}
+.confirm-bar.show { display: flex; }
+.confirm-bar p { font-size: 13px; font-weight: 700; color: var(--navy); }
+.confirm-bar span { font-size: 11.5px; color: var(--gray500); display: block; }
+
+/* ══ BRANCH PROGRESS ══════════════════════════════════ */
+.branch-kpi { display: flex; flex-direction: column; gap: 12px; }
+.bk-row { display: flex; align-items: center; gap: 10px; }
+.bk-name { min-width: 52px; font-size: 11.5px; font-weight: 700; color: var(--navy); }
+.bk-bar-wrap { flex: 1; height: 6px; background: var(--gray100); border-radius: 3px; overflow: hidden; }
+.bk-bar { height: 100%; border-radius: 3px; transition: width .8s cubic-bezier(.34,1.56,.64,1); }
+.bk-pct { font-size: 11px; font-weight: 700; min-width: 36px; text-align: right; }
+.bk-val { font-size: 11px; color: var(--gray400); min-width: 48px; text-align: right; font-family: 'DM Mono'; }
+
+/* ══ SCROLL ═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray200); border-radius: 2px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn .3s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="header-logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <h1>하불실적관리</h1>
+      <p>동부계약관리팀 · EBPM</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="rec-badge" id="recBadge">0건</span>
+  </div>
+</header>
+
+<!-- ══ MAIN WRAP ════════════════════════════════════════ -->
+<div class="main-wrap">
+
+  <!-- ══════════════ VIEW: 대시보드 ══════════════════════ -->
+  <div class="view active" id="view-dash">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div class="page-title">대시보드</div>
+        <div class="page-sub" id="dashSub">데이터를 업로드하면 현황이 표시됩니다</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <select class="fsel" id="dashYear" onchange="renderDash()">
+          <option>2026</option><option>2025</option><option>2024</option>
+        </select>
+        <select class="fsel" id="dashBranch" onchange="renderDash()">
+          <option value="">전체</option>
+          <option>부산지사</option><option>울산지사</option>
+          <option>경북지사</option><option>강원지사</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-box teal">
+        <div class="kpi-label">매출 합계</div>
+        <div class="kpi-val" id="kRev">—</div>
+        <div class="kpi-sub" id="kRevS">—</div>
+      </div>
+      <div class="kpi-box gold">
+        <div class="kpi-label">하불 합계</div>
+        <div class="kpi-val" id="kCost">—</div>
+        <div class="kpi-sub" id="kCostS">—</div>
+      </div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-box green">
+        <div class="kpi-label">공헌이익</div>
+        <div class="kpi-val" id="kCI">—</div>
+        <div class="kpi-sub" id="kCIS">이익률 —</div>
+      </div>
+      <div class="kpi-box navy">
+        <div class="kpi-label">협력사 수</div>
+        <div class="kpi-val" id="kCnt">—</div>
+        <div class="kpi-sub" id="kCntS">전체 0건</div>
+      </div>
+    </div>
+
+    <!-- 월별 차트 -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-label">
+          <div style="font-size:14px;">📊</div>
+          <h3>월별 하불 추이</h3>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-cols" id="monthChart">
+            <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 지사별 달성률 -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-label">
+          <div style="font-size:14px;">🏗</div>
+          <h3>지사별 공헌이익 달성률</h3>
+        </div>
+        <div class="branch-kpi" id="branchKpi">
+          <div class="empty"><div class="ei">📍</div><p>데이터 없음</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 상위 협력사 -->
+    <div class="card">
+      <div class="card-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="section-label" style="margin:0;">
+            <div style="font-size:14px;">🏢</div>
+            <h3>하불 상위 협력사</h3>
+          </div>
+          <span class="badge b-teal">TOP 10</span>
+        </div>
+        <div class="rank-list" id="topPartners">
+          <div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 용역구분 -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-label">
+          <div style="font-size:14px;">📦</div>
+          <h3>용역구분별 비중</h3>
+        </div>
+        <div id="catChart">
+          <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /view-dash -->
+
+  <!-- ══════════════ VIEW: 업로드 ═══════════════════════ -->
+  <div class="view" id="view-upload">
+    <div class="page-title">데이터 업로드</div>
+    <div class="page-sub">거래내역 Excel → AI 자동 변환 → 실적 반영</div>
+
+    <!-- Step 1: 지사 -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-label">
+          <div class="step-num" id="sn1">1</div>
+          <div><h3>지사 선택</h3></div>
+        </div>
+        <div class="branch-grid">
+          <button class="branch-btn" data-branch="부산지사">📍 부산지사</button>
+          <button class="branch-btn" data-branch="울산지사">📍 울산지사</button>
+          <button class="branch-btn" data-branch="경북지사">📍 경북지사</button>
+          <button class="branch-btn" data-branch="강원지사">📍 강원지사</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: 연월 -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-label">
+          <div class="step-num" id="sn2">2</div>
+          <div><h3>기준 연월</h3></div>
+        </div>
+        <div class="field-row">
+          <label>연도</label>
+          <input type="number" class="inp" id="yearIn" value="2026" min="2020" max="2035" style="width:80px;flex:none;">
+          <label>월</label>
+          <select class="sel" id="monthIn">
+            <option value="">-- 선택 --</option>
+            <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+            <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+            <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+            <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: 파일 -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-label">
+          <div class="step-num" id="sn3">3</div>
+          <div><h3>거래내역 파일</h3><span style="font-size:11.5px;color:var(--gray400);">.xlsx / .xls</span></div>
+        </div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileIn" accept=".xlsx,.xls">
+          <span class="drop-icon">📂</span>
+          <p><strong>클릭 또는 드래그</strong>하여 파일 선택<br><small style="font-size:11px;">.xlsx / .xls 파일</small></p>
+        </div>
+        <div class="file-pill" id="filePill">
+          <span>📄</span>
+          <span class="fn" id="fileName">—</span>
+          <span style="font-size:11px;color:var(--gray400);" id="fileSize">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 분석 버튼 -->
+    <button class="btn btn-teal" id="analyzeBtn" disabled style="margin-bottom:14px;">
+      🤖 AI 분석 및 변환 시작
+    </button>
+
+    <!-- 진행 상태 -->
+    <div class="card" id="progressCard" style="display:none;">
+      <div class="card-inner">
+        <div class="section-label">
+          <div style="font-size:14px;">⚙️</div>
+          <h3>진행 상황</h3>
+        </div>
+        <div class="step-list">
+          <div class="step-item"><div class="snum" id="s1">1</div>
+            <div class="stxt"><strong>파일 읽기</strong><span id="s1t">대기 중</span></div></div>
+          <div class="step-item"><div class="snum" id="s2">2</div>
+            <div class="stxt"><strong>AI 컬럼 매핑</strong><span id="s2t">대기 중</span></div></div>
+          <div class="step-item"><div class="snum" id="s3">3</div>
+            <div class="stxt"><strong>데이터 추출·정제</strong><span id="s3t">대기 중</span></div></div>
+          <div class="step-item"><div class="snum" id="s4">4</div>
+            <div class="stxt"><strong>실적관리 반영 준비</strong><span id="s4t">대기 중</span></div></div>
+        </div>
+        <div class="prog-wrap show" id="progWrap">
+          <div class="pbar-bg"><div class="pbar" id="pbar"></div></div>
+          <div class="plabel" id="plabel">준비 중...</div>
+        </div>
+        <div class="ai-log" id="aiLog"></div>
+      </div>
+    </div>
+
+    <!-- 매핑 결과 -->
+    <div class="card" id="mapCard" style="display:none;">
+      <div class="card-inner">
+        <div class="section-label">
+          <div style="font-size:14px;">🔗</div>
+          <h3>컬럼 매핑 결과</h3>
+        </div>
+        <div class="map-grid" id="mapGrid"></div>
+      </div>
+    </div>
+
+    <!-- 결과 배너 -->
+    <div class="result-banner" id="resultBanner">
+      <div class="rb-title">변환 완료 — 확인 후 반영하세요</div>
+      <div class="rb-val" id="rbVal">0건</div>
+      <div class="rb-sub" id="rbSub">—</div>
+      <div class="rb-grid">
+        <div class="rb-item"><div class="rl">매출</div><div class="rv" id="rbRev">—</div></div>
+        <div class="rb-item"><div class="rl">하불</div><div class="rv" id="rbCost">—</div></div>
+        <div class="rb-item"><div class="rl">공헌이익률</div><div class="rv" id="rbCIR">—</div></div>
+      </div>
+    </div>
+
+    <!-- 미리보기 -->
+    <div class="card" id="previewCard">
+      <div class="card-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="section-label" style="margin:0;">
+            <div style="font-size:14px;">👁</div>
+            <h3>변환 결과 미리보기</h3>
+          </div>
+        </div>
+        <div id="previewArea">
+          <div class="empty"><div class="ei">📋</div><p>분석 결과가 여기에 표시됩니다</p></div>
+        </div>
+        <div class="confirm-bar" id="confirmBar">
+          <div><p>✅ 실적관리에 반영할까요?</p><span id="confirmSub">—</span></div>
+          <button class="btn btn-teal" style="width:auto;padding:10px 18px;font-size:13px;" onclick="confirmData()">반영하기</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /view-upload -->
+
+  <!-- ══════════════ VIEW: 전체데이터 ══════════════════ -->
+  <div class="view" id="view-table">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div class="page-title">전체 데이터</div>
+        <div class="page-sub" id="tblCount">0건</div>
+      </div>
+      <button class="btn btn-sm" onclick="exportExcel()">⬇ 내보내기</button>
+    </div>
+
+    <div class="filter-row">
+      <label>지사</label>
+      <select class="fsel" id="fBranch" onchange="renderTable()">
+        <option value="">전체</option>
+        <option>부산지사</option><option>울산지사</option>
+        <option>경북지사</option><option>강원지사</option>
+      </select>
+      <div class="fsep"></div>
+      <label>연도</label>
+      <select class="fsel" id="fYear" onchange="renderTable()">
+        <option value="">전체</option><option>2026</option><option>2025</option>
+      </select>
+      <label>월</label>
+      <select class="fsel" id="fMonth" onchange="renderTable()">
+        <option value="">전체</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+        <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+      </select>
+      <div class="fsep"></div>
+      <input class="finp" id="srch" placeholder="🔍 협력사·고객 검색" oninput="renderTable()">
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>지사</th><th>연/월</th><th>협력사명</th><th>고객</th>
+              <th>용역</th><th style="text-align:right">하불(원)</th>
+              <th style="text-align:right">이익률</th><th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="tblBody">
+            <tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /view-table -->
+
+  <!-- ══════════════ VIEW: 협력사별 ════════════════════ -->
+  <div class="view" id="view-partner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div class="page-title">협력사별 실적</div>
+        <div class="page-sub">월별 하불 누계 분석</div>
+      </div>
+      <button class="btn btn-sm" onclick="exportExcel('partner')">⬇ 내보내기</button>
+    </div>
+    <div class="filter-row">
+      <label>지사</label>
+      <select class="fsel" id="pBranch" onchange="renderPartner()">
+        <option value="">전체</option>
+        <option>부산지사</option><option>울산지사</option>
+        <option>경북지사</option><option>강원지사</option>
+      </select>
+      <div class="fsep"></div>
+      <label>연도</label>
+      <select class="fsel" id="pYear" onchange="renderPartner()">
+        <option value="">전체</option><option>2026</option><option>2025</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>협력사명</th><th>지사</th>
+              <th style="text-align:right">Q1</th>
+              <th style="text-align:right">Q2</th>
+              <th style="text-align:right">Q3</th>
+              <th style="text-align:right">Q4</th>
+              <th style="text-align:right">연간합계</th>
+              <th style="text-align:right">이익률</th>
+            </tr>
+          </thead>
+          <tbody id="partnerBody">
+            <tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /view-partner -->
+
+  <!-- ══════════════ VIEW: 고객별 ══════════════════════ -->
+  <div class="view" id="view-client">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div class="page-title">고객별 실적</div>
+        <div class="page-sub">화주·고객 단위 하불 현황</div>
+      </div>
+      <button class="btn btn-sm" onclick="exportExcel('client')">⬇ 내보내기</button>
+    </div>
+    <div class="filter-row">
+      <label>지사</label>
+      <select class="fsel" id="cBranch" onchange="renderClient()">
+        <option value="">전체</option>
+        <option>부산지사</option><option>울산지사</option>
+        <option>경북지사</option><option>강원지사</option>
+      </select>
+      <div class="fsep"></div>
+      <input class="finp" id="cSrch" placeholder="🔍 고객·협력사 검색" oninput="renderClient()">
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>고객(화주)</th><th>협력사명</th><th>지사</th>
+              <th style="text-align:right">매출</th>
+              <th style="text-align:right">하불</th>
+              <th style="text-align:right">공헌이익</th>
+              <th style="text-align:right">이익률</th>
+              <th>건수</th>
+            </tr>
+          </thead>
+          <tbody id="clientBody">
+            <tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /view-client -->
+
+</div><!-- /main-wrap -->
+
+<!-- ══ BOTTOM NAV ═══════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-tab active" onclick="goView('dash', this)">
+    <span class="ni">📊</span>대시보드
+  </button>
+  <button class="nav-tab" onclick="goView('upload', this)">
+    <span class="ni">📤</span>업로드
+  </button>
+  <button class="nav-tab" onclick="goView('table', this)">
+    <span class="ni">📋</span>전체데이터
+  </button>
+  <button class="nav-tab" onclick="goView('partner', this)">
+    <span class="ni">🏢</span>협력사별
+  </button>
+  <button class="nav-tab" onclick="goView('client', this)">
+    <span class="ni">👤</span>고객별
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+const COLS = ['연도','월','지사','협력사명','고객(화주)','용역구분','계약유형',
+              '매출(원)','하불(원)','공헌이익(원)','공헌이익률',
+              '물량(건/톤)','계약기간_시작','계약기간_종료','계약상태','비고'];
+const CATKEYS = {
+  '컨테이너운송':['컨테이너','container','ctn','fcl','lcl','컨운'],
+  '벌크운송':    ['벌크','bulk','화물운송','일반운송','평판'],
+  '도급':        ['도급','운영','위탁','사업장'],
+  '장비임대':    ['지게차','크레인','장비','임대','렌탈','포크'],
+  '하역':        ['하역','작업','양하','적하','상하차'],
+  '보관':        ['보관','창고','warehouse','wh'],
+};
+const TARGETS = {부산지사:300000000, 울산지사:194000000, 경북지사:160000000, 강원지사:50000000};
+const BCOLORS = ['var(--teal)','var(--green)','var(--gold)','#8b5cf6'];
+
+let allData = [];
+let pendingRows = [];
+let selBranch = '';
+let upFile = null;
+
+// ══════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════
+function goView(name, btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo(0,0);
+  if (name==='dash')    renderDash();
+  if (name==='table')   renderTable();
+  if (name==='partner') renderPartner();
+  if (name==='client')  renderClient();
+}
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+const fmt  = n => (n||0).toLocaleString('ko-KR');
+const fmtB = n => {
+  if (!n && n!==0) return '—';
+  const a = Math.abs(n);
+  if (a>=1e8) return (n/1e8).toFixed(1)+'억';
+  if (a>=1e4) return Math.round(n/1e4)+'만';
+  return fmt(n);
+};
+const pct = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '—';
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2800);
+}
+function bc(v) {
+  const m = {
+    '컨테이너운송':'b-teal','벌크운송':'b-gold','도급':'b-green',
+    '장비임대':'b-gold','하역':'b-navy','보관':'b-navy','기타':'b-gray',
+    '진행중':'b-teal','완료':'b-green','보류':'b-gold','해지':'b-red',
+    '부산지사':'b-teal','울산지사':'b-green','경북지사':'b-gold','강원지사':'b-navy',
+  };
+  return m[v]||'b-gray';
+}
+function fd(data, {year,branch,month,cat,q}={}) {
+  return data.filter(r=>{
+    if (year   && String(r['연도'])!==String(year))   return false;
+    if (branch && r['지사']!==branch)                 return false;
+    if (month  && String(r['월'])!==String(month))    return false;
+    if (cat    && r['용역구분']!==cat)                return false;
+    if (q) {
+      const s=q.toLowerCase();
+      if (!((r['협력사명']||'').toLowerCase().includes(s)||(r['고객(화주)']||'').toLowerCase().includes(s))) return false;
+    }
+    return true;
+  });
+}
+function upBadge() { document.getElementById('recBadge').textContent = allData.length+'건'; }
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderDash() {
+  const year=document.getElementById('dashYear').value;
+  const branch=document.getElementById('dashBranch').value;
+  const data=fd(allData,{year,branch});
+
+  document.getElementById('dashSub').textContent =
+    `${year}년 ${branch||'전체 지사'} · ${data.length}건`;
+
+  const rev  = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
+  const cost = data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
+  const ci   = rev-cost;
+  const pnrs = [...new Set(data.map(r=>r['협력사명']).filter(Boolean))];
+
+  document.getElementById('kRev').textContent   = fmtB(rev);
+  document.getElementById('kCost').textContent  = fmtB(cost);
+  document.getElementById('kCI').textContent    = fmtB(ci);
+  document.getElementById('kCnt').textContent   = pnrs.length;
+  document.getElementById('kRevS').textContent  = fmt(rev)+'원';
+  document.getElementById('kCostS').textContent = fmt(cost)+'원';
+  document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
+  document.getElementById('kCntS').textContent  = '전체 '+data.length+'건';
+
+  renderMonthChart(data);
+  renderBranchKpi(data);
+  renderTopPartners(data);
+  renderCatChart(data);
+}
+
+function renderMonthChart(data) {
+  const el = document.getElementById('monthChart');
+  if (!data.length) {
+    el.innerHTML='<div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>';
+    return;
+  }
+  const byM = Array.from({length:12},(_,i)=>{
+    const rows=data.filter(r=>+r['월']===i+1);
+    return {
+      rev: rows.reduce((s,r)=>s+(+r['매출(원)']||0),0),
+      cost:rows.reduce((s,r)=>s+(+r['하불(원)']||0),0),
+      ci:  rows.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0),
+    };
+  });
+  const maxV = Math.max(...byM.map(b=>Math.max(b.rev,b.cost,b.ci)),1);
+  const h = v => Math.max(Math.round((v/maxV)*100),v>0?2:0);
+
+  el.innerHTML = byM.map((d,i)=>`
+    <div class="bar-col">
+      <div class="bar-stack">
+        <div class="bar-seg" style="height:${h(d.rev)}px;background:var(--teal);opacity:.35;" data-tip="${i+1}월 매출: ${fmtB(d.rev)}"></div>
+        <div class="bar-seg" style="height:${h(d.cost)}px;background:var(--gold);" data-tip="${i+1}월 하불: ${fmtB(d.cost)}"></div>
+        <div class="bar-seg" style="height:${h(d.ci)}px;background:var(--green);" data-tip="${i+1}월 공헌이익: ${fmtB(d.ci)}"></div>
+      </div>
+      <div class="bar-lbl">${i+1}월</div>
+    </div>`).join('');
+}
+
+function renderBranchKpi(data) {
+  const el = document.getElementById('branchKpi');
+  const branches = ['부산지사','울산지사','경북지사','강원지사'];
+  const rows = branches.map((b,i)=>{
+    const bd=data.filter(r=>r['지사']===b);
+    const rev=bd.reduce((s,r)=>s+(+r['매출(원)']||0),0);
+    const cost=bd.reduce((s,r)=>s+(+r['하불(원)']||0),0);
+    const ci=rev-cost;
+    const tgt=TARGETS[b];
+    const pp=tgt?Math.min((ci/tgt)*100,100):0;
+    return {b,ci,tgt,pp,color:BCOLORS[i]};
+  });
+  if (!data.length) { el.innerHTML='<div class="empty"><div class="ei">📍</div><p>데이터 없음</p></div>'; return; }
+  el.innerHTML = rows.map(r=>`
+    <div class="bk-row">
+      <div class="bk-name">${r.b.replace('지사','')}</div>
+      <div class="bk-bar-wrap"><div class="bk-bar" style="width:${r.pp}%;background:${r.color};"></div></div>
+      <div class="bk-pct" style="color:${r.color};">${r.tgt?Math.round(r.pp)+'%':'—'}</div>
+      <div class="bk-val">${fmtB(r.ci)}</div>
+    </div>`).join('');
+}
+
+function renderTopPartners(data) {
+  const el=document.getElementById('topPartners');
+  const byP={};
+  data.forEach(r=>{
+    const p=r['협력사명']||'(미확인)';
+    if(!byP[p]) byP[p]={cost:0,branch:r['지사']||''};
+    byP[p].cost+=(+r['하불(원)']||0);
+  });
+  const top=Object.entries(byP).sort((a,b)=>b[1].cost-a[1].cost).slice(0,10);
+  if(!top.length){el.innerHTML='<div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>';return;}
+  const maxC=top[0][1].cost||1;
+  el.innerHTML=top.map(([name,{cost,branch}],i)=>`
+    <div class="rank-row">
+      <div class="rank-no${i<3?' top':''}">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="rank-name" title="${name}">${name}</div>
+        <div class="rank-branch">${branch}</div>
+      </div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round((cost/maxC)*100)}%;"></div></div>
+      <div class="rank-val">${fmtB(cost)}</div>
+    </div>`).join('');
+}
+
+function renderCatChart(data) {
+  const el=document.getElementById('catChart');
+  const cats=['컨테이너운송','벌크운송','도급','장비임대','하역','보관','기타'];
+  const colors=['var(--teal)','var(--gold)','var(--green)','#f97316','#8b5cf6','#ec4899','var(--gray300)'];
+  const byC={};
+  data.forEach(r=>{ const c=r['용역구분']||'기타'; byC[c]=(byC[c]||0)+(+r['하불(원)']||0); });
+  const total=Object.values(byC).reduce((s,v)=>s+v,0)||1;
+  if (!data.length){el.innerHTML='<div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>';return;}
+  el.innerHTML=cats.map((c,i)=>{
+    const v=byC[c]||0; if(!v) return '';
+    const pp=(v/total*100).toFixed(1);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray100);">
+      <div style="width:8px;height:8px;border-radius:2px;background:${colors[i]};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--navy);">${c}</span>
+      <div style="width:70px;height:4px;background:var(--gray100);border-radius:2px;overflow:hidden;">
+        <div style="width:${pp}%;height:100%;background:${colors[i]};border-radius:2px;"></div>
+      </div>
+      <span style="font-size:12px;font-weight:800;font-family:'DM Mono';color:${colors[i]};min-width:38px;text-align:right;">${pp}%</span>
+    </div>`;
+  }).filter(Boolean).join('')||'<div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>';
+}
+
+// ══════════════════════════════════════════════════════
+// TABLE
+// ══════════════════════════════════════════════════════
+function renderTable() {
+  const data=fd(allData,{
+    year:document.getElementById('fYear').value,
+    branch:document.getElementById('fBranch').value,
+    month:document.getElementById('fMonth').value,
+    q:document.getElementById('srch').value.trim(),
+  });
+  document.getElementById('tblCount').textContent='총 '+data.length+'건';
+  const tb=document.getElementById('tblBody');
+  if(!data.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';return;}
+  tb.innerHTML=data.slice(0,200).map((r,i)=>`<tr>
+    <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
+    <td class="mono">${r['연도']||''}/${r['월']||''}</td>
+    <td class="bold" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
+    <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
+    <td><span class="badge ${bc(r['용역구분'])}">${r['용역구분']||'—'}</span></td>
+    <td class="num">${r['하불(원)']?fmtB(r['하불(원)']):'—'}</td>
+    <td class="num"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
+    <td><span class="badge ${bc(r['계약상태'])}">${r['계약상태']||'—'}</span></td>
+  </tr>`).join('');
+  if(data.length>200) tb.innerHTML+=`<tr><td colspan="8" style="text-align:center;padding:10px;color:var(--gray400);font-size:11px;">처음 200건 / 전체 ${data.length}건</td></tr>`;
+}
+
+// ══════════════════════════════════════════════════════
+// PARTNER
+// ══════════════════════════════════════════════════════
+function renderPartner() {
+  const data=fd(allData,{year:document.getElementById('pYear').value, branch:document.getElementById('pBranch').value});
+  const tb=document.getElementById('partnerBody');
+  const pMap={};
+  data.forEach(r=>{
+    const key=(r['협력사명']||'미확인')+'|'+(r['지사']||'');
+    if(!pMap[key]) pMap[key]={name:r['협력사명']||'미확인',branch:r['지사']||'',qs:[0,0,0,0],rev:0,cost:0,ci:0};
+    const m=+r['월']||1; const qi=Math.floor((m-1)/3);
+    pMap[key].qs[qi]+=(+r['하불(원)']||0);
+    pMap[key].rev+=(+r['매출(원)']||0);
+    pMap[key].cost+=(+r['하불(원)']||0);
+    pMap[key].ci+=(+r['공헌이익(원)']||0);
+  });
+  const rows=Object.values(pMap).sort((a,b)=>b.cost-a.cost);
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr>
+    <td class="bold">${r.name}</td>
+    <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
+    ${r.qs.map(v=>`<td class="num">${v?fmtB(v):'—'}</td>`).join('')}
+    <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmtB(r.cost)}</td>
+    <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// CLIENT
+// ══════════════════════════════════════════════════════
+function renderClient() {
+  const branch=document.getElementById('cBranch').value;
+  const q=document.getElementById('cSrch').value.trim().toLowerCase();
+  let data=fd(allData,{branch});
+  if(q) data=data.filter(r=>(r['고객(화주)']||'').toLowerCase().includes(q)||(r['협력사명']||'').toLowerCase().includes(q));
+  const tb=document.getElementById('clientBody');
+  const cMap={};
+  data.forEach(r=>{
+    const key=(r['고객(화주)']||'미확인')+'|'+(r['협력사명']||'')+'|'+(r['지사']||'');
+    if(!cMap[key]) cMap[key]={client:r['고객(화주)']||'미확인',partner:r['협력사명']||'',branch:r['지사']||'',rev:0,cost:0,ci:0,cnt:0};
+    cMap[key].rev+=(+r['매출(원)']||0); cMap[key].cost+=(+r['하불(원)']||0);
+    cMap[key].ci+=(+r['공헌이익(원)']||0); cMap[key].cnt++;
+  });
+  const rows=Object.values(cMap).sort((a,b)=>b.cost-a.cost);
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr>
+    <td class="bold">${r.client}</td>
+    <td>${r.partner||'—'}</td>
+    <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
+    <td class="num">${fmtB(r.rev)}</td>
+    <td class="num">${fmtB(r.cost)}</td>
+    <td class="num" style="color:var(--green);font-weight:800;">${fmtB(r.ci)}</td>
+    <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
+    <td class="num">${r.cnt}</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// UPLOAD & AI
+// ══════════════════════════════════════════════════════
+document.querySelectorAll('.branch-btn').forEach(btn=>
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.branch-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selBranch=btn.dataset.branch;
+    checkReady();
+  })
+);
+['monthIn','yearIn'].forEach(id=>document.getElementById(id).addEventListener('change',checkReady));
+document.getElementById('yearIn').addEventListener('input',checkReady);
+
+const dropZone=document.getElementById('dropZone');
+const fileIn=document.getElementById('fileIn');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('over'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+fileIn.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+
+function handleFile(f){
+  upFile=f;
+  document.getElementById('fileName').textContent=f.name;
+  document.getElementById('fileSize').textContent=(f.size/1024).toFixed(1)+' KB';
+  document.getElementById('filePill').classList.add('show');
+  checkReady();
+}
+function checkReady(){
+  document.getElementById('analyzeBtn').disabled=!(selBranch&&upFile&&document.getElementById('monthIn').value);
+}
+
+document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
+
+async function runAnalysis(){
+  const year=parseInt(document.getElementById('yearIn').value);
+  const month=parseInt(document.getElementById('monthIn').value);
+  if(!year||!month||!selBranch||!upFile) return;
+
+  document.getElementById('analyzeBtn').disabled=true;
+  document.getElementById('progressCard').style.display='block';
+  document.getElementById('mapCard').style.display='none';
+  document.getElementById('resultBanner').classList.remove('show');
+  document.getElementById('confirmBar').classList.remove('show');
+  document.getElementById('aiLog').innerHTML='';
+  [1,2,3,4].forEach(n=>{snum(n,'');stxt(n,'대기 중');});
+  document.getElementById('previewArea').innerHTML=
+    '<div class="empty"><div class="ei" style="animation:spin 1s linear infinite;display:inline-block;">⚙️</div><p style="margin-top:10px;">AI 분석 중...</p></div>';
+
+  try {
+    snum(1,'active'); stxt(1,'파일 파싱 중...');
+    setProg(10,'파일을 읽는 중...');
+    log('파일: '+upFile.name,'head');
+    await sleep(200);
+
+    const wb = await readXlsx(upFile);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws,{defval:''});
+    const headers = raw.length?Object.keys(raw[0]):[];
+    log(`${wb.SheetNames[0]} · ${raw.length}행 · ${headers.length}컬럼`,'ok');
+    log('컬럼: '+headers.slice(0,6).join(', ')+(headers.length>6?'…':''),'info');
+    snum(1,'done'); stxt(1,raw.length+'행 파싱 완료');
+    setProg(28,'AI 컬럼 매핑...');
+    await sleep(150);
+
+    snum(2,'active'); stxt(2,'Claude AI 분석 중...');
+    log('컬럼 의미 분석','head');
+    const mapping=await aiMap(headers,raw);
+    log('매핑: '+Object.values(mapping).filter(Boolean).length+'개 컬럼 인식','ok');
+    showMapUI(mapping);
+    snum(2,'done'); stxt(2,'매핑 완료');
+    setProg(60,'데이터 추출...');
+    await sleep(150);
+
+    snum(3,'active'); stxt(3,'데이터 추출·정제 중...');
+    log('행별 추출','head');
+    pendingRows=extract(raw,mapping,year,month,selBranch);
+    const pnrs=[...new Set(pendingRows.map(r=>r['협력사명']).filter(Boolean))];
+    const totRev=pendingRows.reduce((s,r)=>s+(+r['매출(원)']||0),0);
+    const totCost=pendingRows.reduce((s,r)=>s+(+r['하불(원)']||0),0);
+    const totCI=totRev-totCost;
+    log(`유효 행: ${pendingRows.length}건`,'ok');
+    log(`협력사: ${pnrs.slice(0,3).join(', ')}${pnrs.length>3?'…':''}`,'info');
+    log(`매출 ${fmtB(totRev)} / 하불 ${fmtB(totCost)}`,'info');
+    snum(3,'done'); stxt(3,pendingRows.length+'건 추출');
+    setProg(88,'변환 완료...');
+    await sleep(150);
+
+    snum(4,'active'); stxt(4,'반영 준비...');
+    log('변환 완료 → 아래에서 확인 후 반영','ok');
+    snum(4,'done'); stxt(4,'반영 대기');
+    setProg(100,'완료! 아래에서 결과를 확인하세요.');
+
+    // 결과 배너
+    const rb=document.getElementById('resultBanner');
+    rb.classList.add('show');
+    document.getElementById('rbVal').textContent=pendingRows.length+'건 변환 완료';
+    document.getElementById('rbSub').textContent=selBranch+' · '+year+'년 '+month+'월';
+    document.getElementById('rbRev').textContent=fmtB(totRev);
+    document.getElementById('rbCost').textContent=fmtB(totCost);
+    document.getElementById('rbCIR').textContent=pct(totCI,totRev);
+
+    renderPreview(pendingRows);
+
+    const cb=document.getElementById('confirmBar');
+    cb.classList.add('show');
+    document.getElementById('confirmSub').textContent=`${pendingRows.length}건 · ${selBranch} ${year}/${month}`;
+
+  } catch(err) {
+    log('오류: '+err.message,'warn');
+    document.getElementById('previewArea').innerHTML=
+      '<div class="empty"><div class="ei">⚠️</div><p>'+err.message+'</p></div>';
+  }
+  document.getElementById('analyzeBtn').disabled=false;
+}
+
+function confirmData(){
+  if(!pendingRows.length) return;
+  allData.push(...pendingRows);
+  pendingRows=[];
+  upBadge();
+  document.getElementById('confirmBar').classList.remove('show');
+  document.getElementById('s4t').textContent='반영 완료 ✓';
+  toast('✓ '+allData.length+'건 반영 완료 — 대시보드 확인');
+}
+
+// ══════════════════════════════════════════════════════
+// EXCEL READ
+// ══════════════════════════════════════════════════════
+function readXlsx(f){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try { res(XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true})); }
+      catch(err){ rej(new Error('파일 읽기 실패: '+err.message)); }
+    };
+    reader.onerror=()=>rej(new Error('파일 읽기 오류'));
+    reader.readAsArrayBuffer(f);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// AI MAPPING
+// ══════════════════════════════════════════════════════
+async function aiMap(headers, sampleRows){
+  const prompt=`물류회사 거래내역 Excel 파일 컬럼을 실적관리 필드에 매핑하세요.
+
+원본 컬럼: ${JSON.stringify(headers)}
+샘플 (5행): ${JSON.stringify(sampleRows.slice(0,5),null,2)}
+
+매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/청구/수입), 하불(원)(하불/원가/지급/비용), 용역구분(서비스종류), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일), 계약기간_종료(종료일), 계약상태(상태), 비고(메모)
+
+JSON만 응답:
+{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null}`;
+
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:[{role:'user',content:prompt}]})
+    });
+    if(!resp.ok) throw new Error('API '+resp.status);
+    const data=await resp.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('').replace(/```json|```/g,'').trim();
+    log('AI 매핑 응답 수신','ok');
+    return JSON.parse(text);
+  } catch {
+    log('AI 응답 실패 → 규칙 기반 매핑','warn');
+    return ruleMap(headers);
+  }
+}
+
+function ruleMap(headers){
+  const lc=h=>h.toLowerCase().replace(/[\s_\-()]/g,'');
+  const find=kws=>headers.find(h=>kws.some(k=>lc(h).includes(k.toLowerCase())))||null;
+  return {
+    '협력사명':     find(['협력사','업체','거래처','vendor','partner','하청']),
+    '고객(화주)':   find(['화주','고객','발주처','client','shipper','청구처']),
+    '매출(원)':     find(['매출','청구','수입','revenue','금액','단가','invoice']),
+    '하불(원)':     find(['하불','원가','지급','cost','비용','하청비','외주비']),
+    '용역구분':     find(['용역','서비스','구분','category','업무','종류']),
+    '계약유형':     find(['계약유형','계약방법','방법']),
+    '물량(건/톤)':  find(['물량','수량','건수','teu','ton','qty']),
+    '계약기간_시작':find(['시작','start','from','계약일','개시']),
+    '계약기간_종료':find(['종료','end','to','만료','until']),
+    '계약상태':     find(['상태','status','state']),
+    '비고':         find(['비고','메모','note','remark','특이']),
+  };
+}
+
+// ══════════════════════════════════════════════════════
+// EXTRACT
+// ══════════════════════════════════════════════════════
+function extract(rows,map,year,month,branch){
+  return rows.map(row=>{
+    const g=k=>map[k]?String(row[map[k]]||'').trim():'';
+    const gn=k=>parseFloat((g(k)).replace(/[,원\s]/g,''))||0;
+    const partner=g('협력사명');
+    const rev=gn('매출(원)'); const cost=gn('하불(원)');
+    if(!partner&&!rev&&!cost) return null;
+    let cat=g('용역구분');
+    if(!cat){
+      const hay=(partner+' '+g('비고')).toLowerCase();
+      for(const[c,kws] of Object.entries(CATKEYS)) if(kws.some(k=>hay.includes(k))){cat=c;break;}
+      if(!cat) cat='기타';
+    }
+    const fd2=v=>{
+      if(!v) return '';
+      if(v instanceof Date) return v.toISOString().split('T')[0];
+      const s=String(v).trim();
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      if(/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+      return s;
+    };
+    const ci=rev&&cost?rev-cost:'';
+    return {
+      '연도':year,'월':month,'지사':branch,
+      '협력사명':partner||'(미확인)','고객(화주)':g('고객(화주)'),
+      '용역구분':cat,'계약유형':g('계약유형'),
+      '매출(원)':rev||'','하불(원)':cost||'','공헌이익(원)':ci,
+      '공헌이익률':rev&&cost?pct(ci,rev):'',
+      '물량(건/톤)':g('물량(건/톤)'),
+      '계약기간_시작':fd2(map['계약기간_시작']?row[map['계약기간_시작']]:''),
+      '계약기간_종료':fd2(map['계약기간_종료']?row[map['계약기간_종료']]:''),
+      '계약상태':g('계약상태')||'진행중','비고':g('비고'),
+    };
+  }).filter(Boolean);
+}
+
+// ══════════════════════════════════════════════════════
+// MAP UI
+// ══════════════════════════════════════════════════════
+function showMapUI(map){
+  const card=document.getElementById('mapCard');
+  const grid=document.getElementById('mapGrid');
+  grid.innerHTML=''; card.style.display='block';
+  const important=['협력사명','고객(화주)','매출(원)','하불(원)'];
+  for(const[dst,src] of Object.entries(map)){
+    if(!src) continue;
+    const d=document.createElement('div');
+    d.className='map-item ok';
+    d.innerHTML=`<div class="map-src">${src}</div><div class="map-dst">${dst}</div>`;
+    if(important.includes(dst)) grid.prepend(d); else grid.appendChild(d);
+  }
+  for(const f of important) if(!map[f]){
+    const d=document.createElement('div');
+    d.className='map-item warn';
+    d.innerHTML=`<div class="map-src" style="color:var(--red);">⚠ 매핑 없음</div><div class="map-dst">${f}</div>`;
+    grid.appendChild(d);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PREVIEW
+// ══════════════════════════════════════════════════════
+function renderPreview(rows){
+  const area=document.getElementById('previewArea');
+  if(!rows.length){area.innerHTML='<div class="empty"><div class="ei">🔍</div><p>추출 데이터 없음</p></div>';return;}
+  const cols=['협력사명','고객(화주)','용역구분','하불(원)','공헌이익률','계약상태'];
+  area.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.slice(0,80).map(r=>`<tr>${cols.map(c=>{
+      const v=r[c]??'';
+      if(c==='하불(원)') return `<td class="num">${v?fmtB(v):'—'}</td>`;
+      if(c==='공헌이익률') return `<td><span class="badge b-green">${v||'—'}</span></td>`;
+      if(c==='용역구분')   return `<td><span class="badge ${bc(v)}">${v||'—'}</span></td>`;
+      if(c==='계약상태')   return `<td><span class="badge ${bc(v)}">${v||'—'}</span></td>`;
+      return `<td class="bold" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;" title="${v}">${v||'—'}</td>`;
+    }).join('')}</tr>`).join('')}</tbody>
+  </table></div>
+  ${rows.length>80?`<p style="text-align:center;font-size:11px;color:var(--gray400);margin-top:8px;">처음 80건 / 전체 ${rows.length}건</p>`:''}`;
+}
+
+// ══════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════
+function exportExcel(type){
+  if(!allData.length){toast('내보낼 데이터가 없습니다');return;}
+  const wb2=XLSX.utils.book_new();
+  const ws1=XLSX.utils.aoa_to_sheet([COLS,...allData.map(r=>COLS.map(c=>r[c]??''))]);
+  XLSX.utils.book_append_sheet(wb2,ws1,'원본데이터');
+  const pMap={};
+  allData.forEach(r=>{
+    const k=(r['협력사명']||'미확인')+'|'+(r['지사']||'');
+    if(!pMap[k]) pMap[k]={name:r['협력사명'],branch:r['지사'],rev:0,cost:0,ci:0,cnt:0};
+    pMap[k].rev+=(+r['매출(원)']||0); pMap[k].cost+=(+r['하불(원)']||0);
+    pMap[k].ci+=(+r['공헌이익(원)']||0); pMap[k].cnt++;
+  });
+  const ws2=XLSX.utils.aoa_to_sheet([
+    ['협력사명','지사','건수','매출(원)','하불(원)','공헌이익(원)','공헌이익률'],
+    ...Object.values(pMap).sort((a,b)=>b.cost-a.cost).map(r=>[r.name,r.branch,r.cnt,r.rev,r.cost,r.ci,r.rev?pct(r.ci,r.rev):''])
+  ]);
+  XLSX.utils.book_append_sheet(wb2,ws2,'협력사별실적');
+  XLSX.writeFile(wb2,'동부계약관리팀_하불실적_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel 다운로드 시작');
+}
+
+// ══════════════════════════════════════════════════════
+// STEP HELPERS
+// ══════════════════════════════════════════════════════
+function snum(n,state){
+  const el=document.getElementById('s'+n);
+  el.classList.remove('done','active');
+  if(state==='done'){el.classList.add('done');el.textContent='✓';}
+  else if(state==='active'){el.classList.add('active');el.textContent=n;}
+  else el.textContent=n;
+}
+function stxt(n,t){document.getElementById('s'+n+'t').textContent=t;}
+function setProg(p,l){
+  document.getElementById('pbar').style.width=p+'%';
+  document.getElementById('plabel').textContent=l;
+}
+function log(msg,type=''){
+  const el=document.getElementById('aiLog');
+  const line=document.createElement('div');
+  line.className='ll '+(type||'');
+  line.textContent=(type==='head'?'':'  ▸ ')+msg;
+  el.appendChild(line); el.scrollTop=el.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+renderDash();
+</script>
+</body>
+</html>
