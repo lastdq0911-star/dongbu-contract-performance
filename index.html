@@ -84,31 +84,59 @@ body {
   padding: 4px 10px; border-radius: 20px;
 }
 
-/* ══ BOTTOM NAV ═══════════════════════════════════════ */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-  background: var(--white);
-  border-top: 1px solid var(--gray200);
+/* ══ LEFT NAV ══════════════════════════════════════════ */
+.app-body {
   display: flex;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+  min-height: calc(100vh - 56px);
 }
-.nav-tab {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  padding: 10px 4px 8px;
-  color: var(--gray400); font-size: 10px; font-weight: 600;
-  cursor: pointer; border: none; background: none; font-family: inherit;
-  transition: color .15s;
-  gap: 3px;
+.left-nav {
+  position: fixed;
+  left: 0; top: 56px; bottom: 0;
+  width: 180px;
+  background: var(--navy);
+  display: flex; flex-direction: column;
+  padding: 12px 0;
+  z-index: 199;
+  overflow-y: auto;
+  box-shadow: 2px 0 16px rgba(0,0,0,.18);
+  flex-shrink: 0;
 }
-.nav-tab .ni { font-size: 20px; line-height: 1; }
-.nav-tab.active { color: var(--teal); }
-.nav-tab.active .ni { filter: drop-shadow(0 0 4px rgba(0,184,169,.4)); }
+.left-nav-logo {
+  padding: 8px 16px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: rgba(255,255,255,.3);
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px 11px 18px;
+  color: rgba(255,255,255,.45);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; background: none;
+  font-family: inherit; width: 100%; text-align: left;
+  transition: all .15s;
+  border-left: 3px solid transparent;
+  letter-spacing: -.2px;
+}
+.nav-item .ni { font-size: 17px; flex-shrink: 0; line-height: 1; }
+.nav-item:hover { color: rgba(255,255,255,.8); background: rgba(255,255,255,.05); }
+.nav-item.active {
+  color: var(--teal);
+  background: rgba(0,184,169,.12);
+  border-left-color: var(--teal);
+}
 
 /* ══ MAIN ════════════════════════════════════════════ */
 .main-wrap {
-  max-width: 1400px; margin: 0 auto;
-  padding: 16px 24px 100px;
+  flex: 1;
+  margin-left: 180px;
+  padding: 16px 20px 24px;
+  min-width: 0;
+  max-width: calc(100% - 180px);
 }
 
 /* ══ VIEW PAGES ══════════════════════════════════════ */
@@ -316,19 +344,68 @@ body {
 
 /* ══ TABLE CARD ═══════════════════════════════════════ */
 .tbl-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 thead tr { background: var(--navy); }
 thead th {
-  padding: 10px 12px; text-align: left;
-  color: rgba(255,255,255,.75); font-size: 10.5px;
-  font-weight: 700; letter-spacing: .4px; white-space: nowrap;
+  padding: 8px 6px; text-align: left;
+  color: rgba(255,255,255,.75); font-size: 10px;
+  font-weight: 700; letter-spacing: .3px; white-space: nowrap;
+  position: relative;
 }
 tbody tr { border-bottom: 1px solid var(--gray100); }
 tbody tr:hover { background: var(--teal-ll); }
-tbody td { padding: 9px 12px; color: var(--gray700); white-space: nowrap; }
+tbody td { padding: 7px 6px; color: var(--gray700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 td.mono { font-family: 'DM Mono', monospace; }
 td.num  { text-align: right; font-family: 'DM Mono'; font-weight: 600; color: var(--navy); }
 td.bold { font-weight: 700; color: var(--navy); }
+
+/* ══ COLUMN FILTER ════════════════════════════════════ */
+.th-inner { display: flex; align-items: center; gap: 3px; }
+.col-filter-btn {
+  border: none; background: rgba(255,255,255,.15); color: rgba(255,255,255,.7);
+  font-size: 9px; padding: 1px 4px; border-radius: 3px; cursor: pointer;
+  line-height: 1.4; flex-shrink: 0; transition: background .12s;
+  font-family: inherit;
+}
+.col-filter-btn:hover { background: rgba(255,255,255,.3); color: #fff; }
+.col-filter-btn.active { background: var(--teal); color: #fff; }
+.col-filter-popup {
+  position: absolute; z-index: 9000;
+  background: var(--white); border: 1.5px solid var(--gray200);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
+  width: 220px; display: none; flex-direction: column;
+  max-height: 320px;
+}
+.col-filter-popup.show { display: flex; }
+.cf-search { padding: 8px 10px; border-bottom: 1px solid var(--gray100); }
+.cf-search input {
+  width: 100%; border: 1.5px solid var(--gray200); border-radius: var(--radius-xs);
+  padding: 5px 8px; font-size: 12px; font-family: inherit; outline: none;
+}
+.cf-search input:focus { border-color: var(--teal); }
+.cf-list { overflow-y: auto; flex: 1; padding: 6px 0; }
+.cf-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px; cursor: pointer; font-size: 12px; color: var(--gray700);
+  transition: background .1s;
+}
+.cf-item:hover { background: var(--teal-ll); }
+.cf-item input[type=checkbox] { accent-color: var(--teal); flex-shrink: 0; cursor: pointer; }
+.cf-divider { height: 1px; background: var(--gray100); margin: 4px 0; }
+.cf-footer {
+  display: flex; gap: 6px; padding: 8px 10px;
+  border-top: 1px solid var(--gray100);
+}
+.cf-footer button {
+  flex: 1; border: none; border-radius: var(--radius-xs);
+  padding: 7px; font-size: 12px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+}
+.cf-apply { background: var(--teal); color: #fff; }
+.cf-apply:hover { background: var(--teal-d); }
+.cf-reset { background: var(--gray100); color: var(--gray500); }
+.cf-reset:hover { background: var(--gray200); }
+.th-filtered { color: var(--teal) !important; background: rgba(0,184,169,.15) !important; }
 
 /* ══ BADGE ════════════════════════════════════════════ */
 .badge {
@@ -423,7 +500,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 /* ══ TOAST ════════════════════════════════════════════ */
 #toast {
-  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
   background: var(--navy); color: #fff;
   padding: 10px 20px; border-radius: 20px;
   font-size: 13px; font-weight: 600; white-space: nowrap;
@@ -535,6 +612,29 @@ td.bold { font-weight: 700; color: var(--navy); }
   <button class="sc-btn" onclick="confirmData()">반영하기 →</button>
   <button class="sc-close" onclick="closeStickyConfirm()" title="닫기">✕</button>
 </div>
+
+<!-- ══ APP BODY ═════════════════════════════════════════ -->
+<div class="app-body">
+
+<!-- ══ LEFT NAV ════════════════════════════════════════ -->
+<nav class="left-nav">
+  <div class="left-nav-logo">메뉴</div>
+  <button class="nav-item active" onclick="goView('dash', this)">
+    <span class="ni">📊</span>대시보드
+  </button>
+  <button class="nav-item" onclick="goView('upload', this)">
+    <span class="ni">📤</span>업로드
+  </button>
+  <button class="nav-item" onclick="goView('table', this)">
+    <span class="ni">📋</span>전체데이터
+  </button>
+  <button class="nav-item" onclick="goView('partner', this)">
+    <span class="ni">🏢</span>협력사별
+  </button>
+  <button class="nav-item" onclick="goView('client', this)">
+    <span class="ni">👤</span>고객별
+  </button>
+</nav>
 
 <!-- ══ MAIN WRAP ════════════════════════════════════════ -->
 <div class="main-wrap">
@@ -835,15 +935,43 @@ td.bold { font-weight: 700; color: var(--navy); }
 
     <div class="card" style="padding:0;overflow:hidden;">
       <div class="tbl-wrap">
-        <table>
-          <thead>
+        <table id="mainTable" style="table-layout:fixed;">
+          <colgroup>
+            <col style="width:54px">
+            <col style="width:52px">
+            <col style="width:120px">
+            <col style="width:105px">
+            <col style="width:78px">
+            <col style="width:72px">
+            <col style="width:72px">
+            <col style="width:46px">
+            <col style="width:55px">
+            <col style="width:88px">
+            <col style="width:88px">
+            <col style="width:88px">
+            <col style="width:58px">
+            <col style="width:54px">
+            <col style="width:85px">
+            <col style="width:34px">
+          </colgroup>
+          <thead id="tblHead">
             <tr>
-              <th>지사</th><th>연/월</th><th>협력사명</th><th>고객(화주)</th>
-              <th>용역</th><th>출발지</th><th>도착지</th><th>톤급</th><th>중량</th>
-              <th style="text-align:right">매출(원)</th>
-              <th style="text-align:right">하불(원)</th>
-              <th style="text-align:right">공헌이익(원)</th>
-              <th style="text-align:right">이익률</th><th>상태</th><th>S/O명</th><th>관리</th>
+              <th><div class="th-inner">지사<button class="col-filter-btn" onclick="openColFilter(event,'지사')">▾</button></div></th>
+              <th><div class="th-inner">연/월</div></th>
+              <th><div class="th-inner">협력사명<button class="col-filter-btn" onclick="openColFilter(event,'협력사명')">▾</button></div></th>
+              <th><div class="th-inner">고객(화주)<button class="col-filter-btn" onclick="openColFilter(event,'고객(화주)')">▾</button></div></th>
+              <th><div class="th-inner">용역<button class="col-filter-btn" onclick="openColFilter(event,'용역구분')">▾</button></div></th>
+              <th><div class="th-inner">출발지<button class="col-filter-btn" onclick="openColFilter(event,'출발지')">▾</button></div></th>
+              <th><div class="th-inner">도착지<button class="col-filter-btn" onclick="openColFilter(event,'도착지')">▾</button></div></th>
+              <th><div class="th-inner">톤급<button class="col-filter-btn" onclick="openColFilter(event,'톤급')">▾</button></div></th>
+              <th><div class="th-inner">중량</div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">매출(원)</div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">하불(원)</div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">공헌이익</div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">이익률</div></th>
+              <th><div class="th-inner">상태<button class="col-filter-btn" onclick="openColFilter(event,'계약상태')">▾</button></div></th>
+              <th><div class="th-inner">S/O명</div></th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="tblBody">
@@ -963,24 +1091,17 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 </div><!-- /main-wrap -->
 
-<!-- ══ BOTTOM NAV ═══════════════════════════════════════ -->
-<nav class="bottom-nav">
-  <button class="nav-tab active" onclick="goView('dash', this)">
-    <span class="ni">📊</span>대시보드
-  </button>
-  <button class="nav-tab" onclick="goView('upload', this)">
-    <span class="ni">📤</span>업로드
-  </button>
-  <button class="nav-tab" onclick="goView('table', this)">
-    <span class="ni">📋</span>전체데이터
-  </button>
-  <button class="nav-tab" onclick="goView('partner', this)">
-    <span class="ni">🏢</span>협력사별
-  </button>
-  <button class="nav-tab" onclick="goView('client', this)">
-    <span class="ni">👤</span>고객별
-  </button>
-</nav>
+</div><!-- /app-body -->
+
+<!-- ══ COLUMN FILTER POPUP ══════════════════════════════ -->
+<div class="col-filter-popup" id="colFilterPopup">
+  <div class="cf-search"><input type="text" id="cfSearch" placeholder="🔍 값 검색..." oninput="filterCfList()"></div>
+  <div class="cf-list" id="cfList"></div>
+  <div class="cf-footer">
+    <button class="cf-apply" onclick="applyColFilter()">적용</button>
+    <button class="cf-reset" onclick="resetColFilter()">초기화</button>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -1027,7 +1148,7 @@ let upFile = null;
 // ══════════════════════════════════════════════════════
 function goView(name, btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   btn.classList.add('active');
   window.scrollTo(0,0);
@@ -1239,8 +1360,13 @@ function renderTable() {
     if(client2  && r['고객(화주)']!==client2)          return;
     if(partner2 && r['협력사명']!==partner2)           return;
     if(q2){const s=q2.toLowerCase();if(!((r['협력사명']||'').toLowerCase().includes(s)||(r['고객(화주)']||'').toLowerCase().includes(s))) return;}
+    // Apply column-level filters
+    for(const [field, vals] of Object.entries(colFilters)) {
+      if(!vals.has(String(r[field]||''))) return;
+    }
     filteredIndices.push(idx);
   });
+  updateColFilterUI();
   const data = filteredIndices.map(i=>allData[i]);
   document.getElementById('tblCount').textContent='총 '+data.length+'건';
   const tb=document.getElementById('tblBody');
@@ -1614,9 +1740,9 @@ function confirmData(){
   // 대시보드로 자동 이동
   setTimeout(()=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
     document.getElementById('view-dash').classList.add('active');
-    document.querySelectorAll('.nav-tab')[0].classList.add('active');
+    document.querySelectorAll('.nav-item')[0].classList.add('active');
     window.scrollTo(0,0);
     renderDash();
   }, 800);
@@ -1624,6 +1750,116 @@ function confirmData(){
 
 function closeStickyConfirm(){
   document.getElementById('stickyConfirm').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════
+// COLUMN FILTER
+// ══════════════════════════════════════════════════════
+let colFilters = {};   // { fieldName: Set(['val1','val2']) } — missing key = no filter
+let _cfField = '';     // currently open popup field
+
+function openColFilter(event, fieldName) {
+  event.stopPropagation();
+  _cfField = fieldName;
+  const popup = document.getElementById('colFilterPopup');
+
+  // Unique values from allData
+  const allVals = [...new Set(allData.map(r => String(r[fieldName] || '')).filter(Boolean))].sort();
+  const selected = colFilters[fieldName] || null;
+
+  // Render list
+  _cfAllVals = allVals;
+  _renderCfList(allVals, selected);
+
+  // Position popup below the clicked button
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const pw = 220;
+  let left = rect.left + window.scrollX;
+  if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
+  popup.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+  popup.style.left = left + 'px';
+  popup.classList.add('show');
+  document.getElementById('cfSearch').value = '';
+  document.getElementById('cfSearch').focus();
+}
+
+let _cfAllVals = [];
+
+function _renderCfList(vals, selected) {
+  const list = document.getElementById('cfList');
+  const allChecked = !selected;
+  list.innerHTML = `
+    <label class="cf-item" style="font-weight:700;">
+      <input type="checkbox" id="cfAll" ${allChecked ? 'checked' : ''} onchange="cfToggleAll(this)">
+      <span>전체 선택</span>
+    </label>
+    <div class="cf-divider"></div>
+    ${vals.map(v => `
+      <label class="cf-item">
+        <input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${!selected || selected.has(v) ? 'checked' : ''} onchange="cfSyncAll()">
+        <span title="${v}">${v}</span>
+      </label>`).join('')}
+    ${vals.length === 0 ? '<div style="padding:12px;text-align:center;color:var(--gray400);font-size:12px;">값 없음</div>' : ''}
+  `;
+}
+
+function filterCfList() {
+  const q = document.getElementById('cfSearch').value.trim().toLowerCase();
+  const filtered = q ? _cfAllVals.filter(v => v.toLowerCase().includes(q)) : _cfAllVals;
+  _renderCfList(filtered, colFilters[_cfField] || null);
+}
+
+function cfToggleAll(cb) {
+  document.querySelectorAll('#cfList input[type=checkbox]:not(#cfAll)').forEach(c => c.checked = cb.checked);
+}
+
+function cfSyncAll() {
+  const all = [...document.querySelectorAll('#cfList input[type=checkbox]:not(#cfAll)')];
+  document.getElementById('cfAll').checked = all.every(c => c.checked);
+}
+
+function applyColFilter() {
+  const cfAll = document.getElementById('cfAll');
+  if (cfAll.checked) {
+    delete colFilters[_cfField];
+  } else {
+    const checked = [...document.querySelectorAll('#cfList input[type=checkbox]:not(#cfAll)')]
+      .filter(c => c.checked).map(c => c.value);
+    if (!checked.length) { toast('⚠ 최소 1개 이상 선택하세요'); return; }
+    colFilters[_cfField] = new Set(checked);
+  }
+  closeColFilter();
+  tableShowAll = false;
+  renderTable();
+}
+
+function resetColFilter() {
+  delete colFilters[_cfField];
+  closeColFilter();
+  tableShowAll = false;
+  renderTable();
+}
+
+function closeColFilter() {
+  document.getElementById('colFilterPopup').classList.remove('show');
+}
+
+document.addEventListener('click', e => {
+  const popup = document.getElementById('colFilterPopup');
+  if (popup && !popup.contains(e.target) && !e.target.classList.contains('col-filter-btn')) {
+    popup.classList.remove('show');
+  }
+});
+
+// Update column header filter indicators
+function updateColFilterUI() {
+  document.querySelectorAll('.col-filter-btn').forEach(btn => {
+    const field = btn.getAttribute('onclick').match(/'([^']+)'\)/)?.[1];
+    if (field) {
+      btn.classList.toggle('active', !!colFilters[field]);
+    }
+  });
 }
 
 // ── 행 삭제 ──────────────────────────────────────────────
