@@ -684,24 +684,30 @@ td.bold { font-weight: 700; color: var(--navy); }
   to   { transform: translateY(0);     opacity: 1; }
 }
 
-/* ══ DASHBOARD ONE-SCREEN LAYOUT ══════════════════════ */
+/* ══ DASHBOARD LAYOUT ══════════════════════════════════ */
 #view-dash {
-  height: calc(100vh - 64px - 40px);
-  flex-direction: column; gap: 6px; overflow: hidden;
+  flex-direction: column; gap: 10px;
 }
 .dash-hdr { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.dash-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; flex-shrink: 0; }
-.dash-kpi .kpi-box { padding: 8px 12px; }
-.dash-kpi .kpi-val { font-size: 17px; }
+.dash-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; flex-shrink: 0; }
+.dash-kpi .kpi-box { padding: 10px 14px; }
+.dash-kpi .kpi-val { font-size: 18px; }
 .dash-kpi .kpi-label { margin-bottom: 2px; font-size: 11px; }
 .dash-kpi .kpi-sub  { font-size: 10px; }
-.dash-main { display: grid; grid-template-columns: 1fr 260px; gap: 6px; flex: 1; min-height: 0; }
-.dash-chart-card { display: flex; flex-direction: column; min-height: 0; }
-.dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; }
-.dash-chart-card .section-label { margin-bottom: 6px; flex-shrink: 0; }
-.dash-right { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; }
-.dash-right .card-inner { padding: 8px 10px; }
-.dash-right .section-label { margin-bottom: 4px; }
+/* 좌측 차트 + 우측 패널 — 우측 비중을 키워 차트가 과하게 크지 않도록 */
+.dash-main { display: grid; grid-template-columns: 1fr 340px; gap: 10px; align-items: start; }
+/* 차트 카드: 화면 전체가 아닌 적당한 고정 높이 */
+.dash-chart-card { display: flex; flex-direction: column; height: 360px; }
+.dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
+.dash-chart-card .section-label { margin-bottom: 8px; flex-shrink: 0; }
+.dash-right { display: flex; flex-direction: column; gap: 10px; }
+.dash-right .card-inner { padding: 10px 12px; }
+.dash-right .section-label { margin-bottom: 6px; }
+/* 좁은 화면에서는 차트와 패널을 세로로 쌓음 */
+@media (max-width: 880px) {
+  .dash-main { grid-template-columns: 1fr; }
+  .dash-chart-card { height: 300px; }
+}
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -909,18 +915,18 @@ td.bold { font-weight: 700; color: var(--navy); }
     <div class="page-title">데이터 업로드</div>
     <div class="page-sub">거래내역 Excel → AI 자동 변환 → 실적 반영</div>
 
-    <!-- Step 0: 업로더 ID -->
+    <!-- Step 0: 업로더 (로그인 계정 자동 기록) -->
     <div class="card">
       <div class="card-inner">
         <div class="section-label">
-          <div class="step-num">ID</div>
-          <div><h3>업로더 확인</h3><span>업로드한 사람의 이름 또는 아이디</span></div>
+          <div class="step-num">👤</div>
+          <div><h3>업로더</h3><span>로그인 계정으로 자동 기록됩니다</span></div>
         </div>
         <div class="field-row">
-          <input type="text" class="inp" id="uploaderIdIn" placeholder="예) 홍길동 / team01"
-            oninput="saveUploaderId();checkReady()"
-            style="max-width:260px;">
-          <span style="font-size:11.5px;color:var(--gray400);">입력한 ID는 배치 기록에 저장됩니다</span>
+          <input type="text" class="inp" id="uploaderIdIn" readonly
+            placeholder="로그인하면 자동으로 표시됩니다"
+            style="max-width:260px;background:var(--gray50);color:var(--teal);font-weight:700;">
+          <span style="font-size:11.5px;color:var(--gray400);" id="uploaderHint">업로드한 사람이 배치 기록에 자동 저장됩니다</span>
         </div>
       </div>
     </div>
@@ -1544,6 +1550,7 @@ function updateAuthUI() {
     btn.textContent = '🔑 로그인'; btn.classList.remove('on');
     info.style.display = 'none';
   }
+  if (typeof loadUploaderId === 'function') loadUploaderId();
 }
 // 기존 호출 호환용 별칭
 function updateAdminUI() { updateAuthUI(); }
@@ -2099,18 +2106,19 @@ function handleFile(f){
   checkReady();
 }
 function checkReady(){
-  const uid = (document.getElementById('uploaderIdIn').value||'').trim();
-  document.getElementById('analyzeBtn').disabled=!(uid&&selBranch&&upFile&&document.getElementById('monthIn').value);
+  document.getElementById('analyzeBtn').disabled=!(selBranch&&upFile&&document.getElementById('monthIn').value);
 }
 
-function saveUploaderId(){
-  const v = (document.getElementById('uploaderIdIn').value||'').trim();
-  if(v) localStorage.setItem('dongbu_uploader_id', v);
-}
-
+// 로그인 계정 이름을 업로더 칸에 자동 표시
 function loadUploaderId(){
-  const v = localStorage.getItem('dongbu_uploader_id')||'';
-  if(v) { document.getElementById('uploaderIdIn').value = v; }
+  const inp = document.getElementById('uploaderIdIn');
+  if (!inp) return;
+  if (sbUser) {
+    inp.value = sbUser.email.split('@')[0];
+  } else {
+    inp.value = '';
+    inp.placeholder = '로그인하면 자동으로 표시됩니다';
+  }
 }
 
 document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
