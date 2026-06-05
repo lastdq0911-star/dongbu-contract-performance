@@ -86,6 +86,75 @@ body {
 }
 .save-btn:hover { background: var(--teal); color: #fff; }
 .save-btn.saved { background: var(--green); border-color: var(--green); color: #fff; }
+.admin-btn {
+  border: 1.5px solid rgba(255,255,255,.2); border-radius: 20px;
+  background: rgba(255,255,255,.08); color: rgba(255,255,255,.6);
+  font-size: 11.5px; font-weight: 700; padding: 4px 12px;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.admin-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+.admin-btn.on { background: rgba(245,166,35,.2); border-color: rgba(245,166,35,.5); color: var(--gold); }
+
+/* ══ ADMIN MODAL ═══════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--white); border-radius: var(--radius);
+  padding: 28px 28px 24px; width: 320px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  animation: fadeIn .2s ease;
+}
+.modal-title { font-size: 17px; font-weight: 900; color: var(--navy); margin-bottom: 4px; }
+.modal-sub   { font-size: 12px; color: var(--gray400); margin-bottom: 18px; }
+.modal-inp {
+  width: 100%; border: 2px solid var(--gray200); border-radius: var(--radius-xs);
+  padding: 12px 14px; font-size: 18px; font-family: 'DM Mono',monospace;
+  letter-spacing: 6px; text-align: center; outline: none;
+  transition: border-color .15s;
+}
+.modal-inp:focus { border-color: var(--teal); }
+.modal-err { color: var(--red); font-size: 12px; min-height: 18px; margin-top: 8px; text-align: center; }
+.modal-btns { display: flex; gap: 8px; margin-top: 18px; }
+.modal-cancel {
+  flex: 1; padding: 11px; border: 1.5px solid var(--gray200); border-radius: var(--radius-xs);
+  background: var(--white); color: var(--gray500); font-weight: 700; font-size: 14px;
+  font-family: inherit; cursor: pointer;
+}
+.modal-confirm {
+  flex: 2; padding: 11px; border: none; border-radius: var(--radius-xs);
+  background: var(--navy); color: #fff; font-weight: 800; font-size: 14px;
+  font-family: inherit; cursor: pointer;
+}
+.modal-confirm:hover { background: var(--navy2); }
+.modal-info { font-size: 11.5px; color: var(--gray400); margin-top: 10px; text-align: center; }
+.modal-info a { color: var(--teal); cursor: pointer; text-decoration: underline; }
+
+/* 관리자 잠금 표시 */
+.lock-overlay {
+  position: absolute; inset: 0; background: rgba(248,250,252,.7);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; font-size: 11px; color: var(--gray400); gap: 4px;
+  pointer-events: none;
+}
+
+/* 중복 경고 배너 */
+.dup-warn {
+  background: var(--gold-l); border: 1.5px solid var(--gold);
+  border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 12px;
+  font-size: 13px; color: #92400e; display: none;
+}
+.dup-warn.show { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dup-warn strong { font-weight: 800; }
+.dup-del-btn {
+  border: none; background: var(--gold); color: #fff; border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 800; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.dup-del-btn:hover { background: #d97706; }
 .rec-badge {
   background: rgba(0,184,169,.2); border: 1px solid rgba(0,184,169,.3);
   color: var(--teal); font-size: 11px; font-weight: 700;
@@ -364,7 +433,7 @@ tbody tr { border-bottom: 1px solid var(--gray100); }
 tbody tr:hover { background: var(--teal-ll); }
 tbody td { padding: 7px 6px; color: var(--gray700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 td.mono { font-family: 'DM Mono', monospace; }
-td.num  { text-align: right; font-family: 'DM Mono'; font-weight: 600; color: var(--navy); }
+td.num  { text-align: right; font-family: 'DM Mono'; font-weight: 600; color: var(--navy); overflow: visible; }
 td.bold { font-weight: 700; color: var(--navy); }
 
 /* ══ COLUMN FILTER ════════════════════════════════════ */
@@ -608,7 +677,8 @@ td.bold { font-weight: 700; color: var(--navy); }
   </div>
   <div class="header-right">
     <span class="rec-badge" id="recBadge">0건</span>
-    <button class="save-btn" id="saveBtn" onclick="manualSave()" title="현재 데이터를 브라우저에 저장합니다">💾 저장</button>
+    <button class="admin-btn" id="adminBtn" onclick="toggleAdminMode()" title="관리자 로그인/로그아웃">🔒 관리자</button>
+    <button class="save-btn" id="saveBtn" onclick="requireAdmin(manualSave)" title="현재 데이터를 브라우저에 저장합니다">💾 저장</button>
   </div>
 </header>
 
@@ -862,6 +932,12 @@ td.bold { font-weight: 700; color: var(--navy); }
       </div>
     </div>
 
+    <!-- 중복 데이터 경고 -->
+    <div class="dup-warn" id="dupWarn">
+      <span>⚠ <strong id="dupWarnLabel">—</strong> 데이터가 이미 존재합니다. 기존 데이터를 삭제한 후 새로 반영하세요.</span>
+      <button class="dup-del-btn" onclick="deleteDupBatch()">기존 배치 삭제</button>
+    </div>
+
     <!-- 결과 배너 -->
     <div class="result-banner" id="resultBanner">
       <div class="rb-title">변환 완료 — 확인 후 반영하세요</div>
@@ -949,22 +1025,22 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="tbl-wrap">
         <table id="mainTable" style="table-layout:fixed;">
           <colgroup>
-            <col style="width:54px">
             <col style="width:52px">
-            <col style="width:120px">
+            <col style="width:50px">
+            <col style="width:112px">
+            <col style="width:100px">
+            <col style="width:72px">
+            <col style="width:65px">
+            <col style="width:65px">
+            <col style="width:42px">
+            <col style="width:50px">
             <col style="width:105px">
-            <col style="width:78px">
-            <col style="width:72px">
-            <col style="width:72px">
-            <col style="width:46px">
-            <col style="width:55px">
-            <col style="width:88px">
-            <col style="width:88px">
-            <col style="width:88px">
+            <col style="width:105px">
+            <col style="width:105px">
             <col style="width:58px">
-            <col style="width:54px">
-            <col style="width:85px">
-            <col style="width:34px">
+            <col style="width:50px">
+            <col style="width:78px">
+            <col style="width:30px">
           </colgroup>
           <thead id="tblHead">
             <tr>
@@ -1030,11 +1106,6 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12" selected>12월</option>
       </select>
-      <div class="fsep"></div>
-      <div style="display:flex;border:1.5px solid var(--gray200);border-radius:var(--radius-xs);overflow:hidden;">
-        <button id="pModePartner" onclick="setPMode('partner')" style="border:none;padding:5px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--teal);color:#fff;">협력사별</button>
-        <button id="pModeClient" onclick="setPMode('client')" style="border:none;padding:5px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--white);color:var(--gray500);">고객별</button>
-      </div>
       <div class="fsep"></div>
       <input class="finp" id="pSrch" placeholder="🔍 검색" oninput="renderPartner()" style="min-width:100px;">
     </div>
@@ -1112,6 +1183,39 @@ td.bold { font-weight: 700; color: var(--navy); }
   <div class="cf-footer">
     <button class="cf-apply" onclick="applyColFilter()">적용</button>
     <button class="cf-reset" onclick="resetColFilter()">초기화</button>
+  </div>
+</div>
+
+<!-- ══ ADMIN LOGIN MODAL ════════════════════════════════ -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal-box">
+    <div class="modal-title" id="adminModalTitle">🔐 관리자 로그인</div>
+    <div class="modal-sub" id="adminModalSub">관리자 PIN을 입력하세요</div>
+    <input type="password" class="modal-inp" id="adminPinInput" maxlength="8" placeholder="• • • •"
+           onkeydown="if(event.key==='Enter')submitAdminPin()">
+    <div class="modal-err" id="adminErr"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeAdminModal()">취소</button>
+      <button class="modal-confirm" onclick="submitAdminPin()">확인</button>
+    </div>
+    <div class="modal-info" id="adminModalInfo">PIN을 잊으셨나요? <a onclick="resetAdminPin()">초기화 (0000)</a></div>
+  </div>
+</div>
+
+<!-- ══ PIN CHANGE MODAL ══════════════════════════════════ -->
+<div class="modal-overlay" id="pinChangeModal">
+  <div class="modal-box">
+    <div class="modal-title">🔑 PIN 변경</div>
+    <div class="modal-sub">새 PIN을 입력하세요 (숫자 4~8자리)</div>
+    <input type="password" class="modal-inp" id="newPin1" maxlength="8" placeholder="새 PIN"
+           style="letter-spacing:4px;margin-bottom:8px;" onkeydown="if(event.key==='Enter')document.getElementById('newPin2').focus()">
+    <input type="password" class="modal-inp" id="newPin2" maxlength="8" placeholder="새 PIN 확인"
+           style="letter-spacing:4px;margin-top:0;" onkeydown="if(event.key==='Enter')submitPinChange()">
+    <div class="modal-err" id="pinChangeErr"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closePinChangeModal()">취소</button>
+      <button class="modal-confirm" onclick="submitPinChange()">변경</button>
+    </div>
   </div>
 </div>
 
@@ -1215,6 +1319,133 @@ function fd(data, {year,branch,month,cat,q}={}) {
 function upBadge() { document.getElementById('recBadge').textContent = allData.length+'건'; }
 
 // ══════════════════════════════════════════════════════
+// ADMIN SYSTEM
+// ══════════════════════════════════════════════════════
+const LS_PIN = 'dongbu_admin_pin';
+let isAdmin = false;
+let _pendingAdminCb = null;
+let _adminModalMode = 'login'; // 'login'
+
+function getStoredPin() {
+  return localStorage.getItem(LS_PIN) || '0000';
+}
+
+function toggleAdminMode() {
+  if (isAdmin) {
+    isAdmin = false;
+    updateAdminUI();
+    toast('🔒 관리자 모드 종료');
+  } else {
+    _adminModalMode = 'login';
+    _pendingAdminCb = null;
+    document.getElementById('adminModalTitle').textContent = '🔐 관리자 로그인';
+    document.getElementById('adminModalSub').textContent   = '관리자 PIN을 입력하세요';
+    document.getElementById('adminModalInfo').style.display = '';
+    openAdminModal();
+  }
+}
+
+function requireAdmin(cb) {
+  if (isAdmin) { cb(); return; }
+  _pendingAdminCb = cb;
+  _adminModalMode = 'login';
+  document.getElementById('adminModalTitle').textContent = '🔐 관리자 권한 필요';
+  document.getElementById('adminModalSub').textContent   = '이 작업은 관리자 PIN이 필요합니다';
+  document.getElementById('adminModalInfo').style.display = '';
+  openAdminModal();
+}
+
+function openAdminModal() {
+  document.getElementById('adminPinInput').value = '';
+  document.getElementById('adminErr').textContent = '';
+  document.getElementById('adminModal').classList.add('show');
+  setTimeout(()=>document.getElementById('adminPinInput').focus(), 100);
+}
+
+function closeAdminModal() {
+  document.getElementById('adminModal').classList.remove('show');
+  _pendingAdminCb = null;
+}
+
+function submitAdminPin() {
+  const pin = document.getElementById('adminPinInput').value;
+  if (pin !== getStoredPin()) {
+    document.getElementById('adminErr').textContent = '❌ PIN이 올바르지 않습니다';
+    document.getElementById('adminPinInput').value = '';
+    document.getElementById('adminPinInput').focus();
+    return;
+  }
+  isAdmin = true;
+  document.getElementById('adminModal').classList.remove('show');
+  updateAdminUI();
+  toast('🔓 관리자 모드 활성화');
+  if (_pendingAdminCb) { const cb = _pendingAdminCb; _pendingAdminCb = null; cb(); }
+}
+
+function resetAdminPin() {
+  if (!confirm('PIN을 초기값(0000)으로 초기화하시겠습니까?')) return;
+  localStorage.removeItem(LS_PIN);
+  toast('PIN이 0000으로 초기화되었습니다');
+  closeAdminModal();
+}
+
+function openPinChangeModal() {
+  if (!isAdmin) { requireAdmin(openPinChangeModal); return; }
+  document.getElementById('newPin1').value = '';
+  document.getElementById('newPin2').value = '';
+  document.getElementById('pinChangeErr').textContent = '';
+  document.getElementById('pinChangeModal').classList.add('show');
+  setTimeout(()=>document.getElementById('newPin1').focus(), 100);
+}
+
+function closePinChangeModal() {
+  document.getElementById('pinChangeModal').classList.remove('show');
+}
+
+function submitPinChange() {
+  const p1 = document.getElementById('newPin1').value;
+  const p2 = document.getElementById('newPin2').value;
+  if (!/^\d{4,8}$/.test(p1)) {
+    document.getElementById('pinChangeErr').textContent = '❌ PIN은 숫자 4~8자리여야 합니다'; return;
+  }
+  if (p1 !== p2) {
+    document.getElementById('pinChangeErr').textContent = '❌ PIN이 일치하지 않습니다'; return;
+  }
+  localStorage.setItem(LS_PIN, p1);
+  closePinChangeModal();
+  toast('🔑 PIN이 변경되었습니다');
+}
+
+function updateAdminUI() {
+  const btn = document.getElementById('adminBtn');
+  if (isAdmin) {
+    btn.textContent = '🔓 관리자';
+    btn.classList.add('on');
+  } else {
+    btn.textContent = '🔒 관리자';
+    btn.classList.remove('on');
+  }
+  updateNavAdminMenu();
+}
+
+// 사이드바 하단에 PIN 변경 메뉴 동적 추가 (관리자 전용)
+function updateNavAdminMenu() {
+  let el = document.getElementById('navPinChange');
+  if (!el) {
+    el = document.createElement('button');
+    el.id = 'navPinChange';
+    el.className = 'nav-item';
+    el.style.marginTop = 'auto';
+    el.style.borderTop = '1px solid rgba(255,255,255,.08)';
+    el.style.paddingTop = '14px';
+    el.innerHTML = '<span class="ni">🔑</span>PIN 변경';
+    el.onclick = openPinChangeModal;
+    document.querySelector('.left-nav').appendChild(el);
+  }
+  el.style.display = isAdmin ? 'flex' : 'none';
+}
+
+// ══════════════════════════════════════════════════════
 // LOCAL STORAGE
 // ══════════════════════════════════════════════════════
 const LS_DATA    = 'dongbu_allData';
@@ -1264,6 +1495,9 @@ function renderBatchList() {
 }
 
 function deleteBatch(batchId) {
+  requireAdmin(()=>_deleteBatch(batchId));
+}
+function _deleteBatch(batchId) {
   const b = batches.find(x=>x.id===batchId);
   if (!b) return;
   if (!confirm(`'${b.label}' 배치의 ${b.count}건을 모두 삭제하시겠습니까?`)) return;
@@ -1488,16 +1722,6 @@ function renderTable() {
 // PARTNER
 // ══════════════════════════════════════════════════════
 let partnerExpanded = {};
-let pViewMode = 'partner'; // 'partner' | 'client'
-
-function setPMode(mode) {
-  pViewMode = mode;
-  document.getElementById('pModePartner').style.background = mode==='partner' ? 'var(--teal)' : 'var(--white)';
-  document.getElementById('pModePartner').style.color      = mode==='partner' ? '#fff' : 'var(--gray500)';
-  document.getElementById('pModeClient').style.background  = mode==='client'  ? 'var(--teal)' : 'var(--white)';
-  document.getElementById('pModeClient').style.color       = mode==='client'  ? '#fff' : 'var(--gray500)';
-  renderPartner();
-}
 
 function renderPartner() {
   const year    = document.getElementById('pYear').value;
@@ -1521,7 +1745,7 @@ function renderPartner() {
   for(let m=mFrom; m<=mTo; m++) months.push(m);
   const totalCols = 2 + months.length + 2; // 이름+지사 + 각월 + 누계+이익률
 
-  if(pViewMode === 'partner') {
+  {
     // ── 협력사별 ──
     head.innerHTML = `<tr><th>협력사명</th><th>지사</th>${months.map(m=>`<th style="text-align:right">${m}월</th>`).join('')}<th style="text-align:right">누계(하불)</th><th style="text-align:right">이익률</th><th style="text-align:right">고객수</th></tr>`;
     const pMap={};
@@ -1588,34 +1812,6 @@ function renderPartner() {
       }
     });
     tb.innerHTML=html;
-
-  } else {
-    // ── 고객별 ──
-    head.innerHTML = `<tr><th>고객(화주)</th><th>지사</th>${months.map(m=>`<th style="text-align:right">${m}월</th>`).join('')}<th style="text-align:right">누계(하불)</th><th style="text-align:right">이익률</th><th style="text-align:right">건수</th></tr>`;
-    const cMap={};
-    data.forEach(r=>{
-      const client=(r['고객(화주)']||'미확인');
-      if(srch && !client.toLowerCase().includes(srch)) return;
-      const key=client+'|'+(r['지사']||'');
-      if(!cMap[key]) cMap[key]={client,branch:r['지사']||'',ms:{},rev:0,cost:0,ci:0,cnt:0};
-      const m=+r['월']||1;
-      cMap[key].ms[m]=(cMap[key].ms[m]||0)+(+r['하불(원)']||0);
-      cMap[key].rev +=(+r['매출(원)']||0);
-      cMap[key].cost+=(+r['하불(원)']||0);
-      cMap[key].ci  +=(+r['공헌이익(원)']||0);
-      cMap[key].cnt++;
-    });
-    const rows=Object.values(cMap).sort((a,b)=>b.cost-a.cost);
-    if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;return;}
-    document.getElementById('partnerSub').textContent=`고객별 · ${rows.length}개 고객 · ${mFrom}월~${mTo}월`;
-    tb.innerHTML=rows.map(r=>`<tr>
-      <td class="bold">${r.client}</td>
-      <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
-      ${months.map(m=>`<td class="num" style="font-size:11.5px;">${r.ms[m]?fmt(r.ms[m]):'—'}</td>`).join('')}
-      <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>
-      <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
-      <td class="num" style="color:var(--gray500);">${r.cnt}건</td>
-    </tr>`).join('');
   }
 }
 
@@ -1786,6 +1982,17 @@ async function runAnalysis(){
 
     renderPreview(pendingRows);
 
+    // 중복 배치 감지
+    const dupBatch = batches.find(b=>b.branch===selBranch&&b.year===year&&b.month===month);
+    const dupWarn = document.getElementById('dupWarn');
+    if (dupBatch) {
+      document.getElementById('dupWarnLabel').textContent = dupBatch.label+' ('+dupBatch.count+'건)';
+      dupWarn.dataset.dupId = dupBatch.id;
+      dupWarn.classList.add('show');
+    } else {
+      dupWarn.classList.remove('show');
+    }
+
     const cb=document.getElementById('confirmBar');
     cb.classList.add('show');
     document.getElementById('confirmSub').textContent=`${pendingRows.length}건 · ${selBranch} ${year}/${month}`;
@@ -1803,6 +2010,10 @@ async function runAnalysis(){
 }
 
 function confirmData(){
+  if(!pendingRows.length) return;
+  requireAdmin(_doConfirmData);
+}
+function _doConfirmData(){
   if(!pendingRows.length) return;
   // 배치 ID 생성 및 각 행에 태깅
   const batchId = selBranch+'-'+document.getElementById('yearIn').value+'-'+document.getElementById('monthIn').value+'-'+Date.now();
@@ -1835,6 +2046,16 @@ function confirmData(){
 
 function closeStickyConfirm(){
   document.getElementById('stickyConfirm').classList.remove('show');
+}
+
+function deleteDupBatch() {
+  const dupWarn = document.getElementById('dupWarn');
+  const batchId = dupWarn.dataset.dupId;
+  requireAdmin(()=>{
+    _deleteBatch(batchId);
+    dupWarn.classList.remove('show');
+    toast('기존 배치 삭제 완료 — 이제 반영하기를 누르세요');
+  });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1952,6 +2173,9 @@ function updateColFilterUI() {
 let filteredIndices = [];
 
 function deleteRow(filteredIdx){
+  requireAdmin(()=>_deleteRow(filteredIdx));
+}
+function _deleteRow(filteredIdx){
   const realIdx = filteredIndices[filteredIdx];
   if(realIdx === undefined) return;
   if(!confirm('이 행을 삭제하시겠습니까?\n' +
@@ -1970,6 +2194,9 @@ function deleteRow(filteredIdx){
 }
 
 function deleteByFilter(){
+  requireAdmin(_doDeleteByFilter);
+}
+function _doDeleteByFilter(){
   const branch = document.getElementById('fBranch').value;
   const year   = document.getElementById('fYear').value;
   const month  = document.getElementById('fMonth').value;
@@ -2211,6 +2438,7 @@ function log(msg,type=''){
 // ══════════════════════════════════════════════════════
 loadFromStorage();
 upBadge();
+updateAdminUI();
 renderDash();
 </script>
 </body>
