@@ -1473,22 +1473,64 @@ function dbToRow(d) {
   };
 }
 
+// performance_records를 1000행 단위로 끝까지 페이지네이션하여 모두 가져옴
+// (Supabase는 한 번에 최대 1000행만 반환하므로 대량 데이터 대응에 필수)
+async function fetchAllRecords(applyFilter) {
+  const size = 1000;
+  let from = 0, all = [];
+  while (true) {
+    let q = _sb.from('performance_records').select('*')
+      .order('created_at', {ascending:true})
+      .range(from, from + size - 1);
+    if (applyFilter) q = applyFilter(q);
+    const { data, error } = await q;
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < size) break;   // 마지막 페이지
+    from += size;
+  }
+  return all;
+}
+
+// 현재 활성화된 화면 다시 그리기
+function rerenderActiveViews() {
+  upBadge();
+  renderDash();
+  if (document.getElementById('view-table').classList.contains('active'))   renderTable();
+  if (document.getElementById('view-partner').classList.contains('active')) renderPartner();
+  if (document.getElementById('view-client').classList.contains('active'))  renderClient();
+  if (document.getElementById('view-batch').classList.contains('active'))   renderBatchManager();
+}
+
 async function loadFromSupabase() {
   try {
-    const [recRes, batRes] = await Promise.all([
-      _sb.from('performance_records').select('*').order('created_at',{ascending:true}),
-      _sb.from('batches').select('*').order('created_at',{ascending:true}),
-    ]);
-    if (recRes.error) throw recRes.error;
+    // 1) 배치 먼저 로드 (가벼움) → 최신 연도 파악
+    const batRes = await _sb.from('batches').select('*').order('created_at',{ascending:true});
     if (batRes.error) throw batRes.error;
-    allData = (recRes.data||[]).map(dbToRow);
     batches = (batRes.data||[]).map(b=>({
       id:b.id, label:b.label, branch:b.branch, year:b.year,
       month:b.month, count:b.count, uploader:b.uploader, ts:b.ts,
     }));
-    upBadge();
-    renderDash();
-    if (document.getElementById('view-table').classList.contains('active')) renderTable();
+    renderBatchList();
+
+    const years  = [...new Set(batches.map(b=>+b.year).filter(Boolean))].sort((a,b)=>b-a);
+    const latest = years[0] || +document.getElementById('dashYear').value || new Date().getFullYear();
+
+    // 대시보드 연도를 최신 연도로 맞춰 바로 보이게
+    const dy = document.getElementById('dashYear');
+    if (dy && [...dy.options].some(o=>o.value==String(latest))) dy.value = String(latest);
+
+    // 2) 최신 연도 데이터 우선 로드 → 즉시 화면 표시
+    const recent = await fetchAllRecords(q => q.eq('year', latest));
+    allData = recent.map(dbToRow);
+    rerenderActiveViews();
+
+    // 3) 나머지 연도는 백그라운드로 이어서 로드 → 병합 후 갱신
+    if (years.length > 1) {
+      const rest = await fetchAllRecords(q => q.neq('year', latest));
+      allData = allData.concat(rest.map(dbToRow));
+      rerenderActiveViews();
+    }
   } catch(e) {
     console.error('Supabase load error:', e);
     toast('⚠ 데이터 로딩 실패: '+(e.message||e));
