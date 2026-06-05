@@ -10,7 +10,12 @@
 <title>동부계약관리팀 · 하불실적관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&family=Barlow+Condensed:ital,wght@1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+@font-face {
+  font-family: 'SEBANG_Gothic';
+  src: url('SEBANG_Gothic.ttf') format('truetype');
+  font-weight: normal; font-style: normal;
+}
 
 :root {
   --teal:     #00b8a9;
@@ -67,12 +72,12 @@ body {
 }
 .sebang-wordmark {
   display: flex; align-items: baseline;
-  font-family: 'Barlow Condensed', 'Impact', sans-serif;
-  font-style: italic; font-weight: 900; line-height: 1;
-  letter-spacing: -1px; color: #fff;
+  font-family: 'SEBANG_Gothic', 'Barlow Condensed', sans-serif;
+  font-style: normal; font-weight: normal; line-height: 1;
+  letter-spacing: 0px; color: #fff;
 }
 .sebang-wordmark .se  { font-size: 30px; }
-.sebang-wordmark .bang { font-size: 22px; }
+.sebang-wordmark .bang { font-size: 30px; }
 .sebang-corp {
   font-size: 11px; font-weight: 600; color: rgba(255,255,255,.65);
   letter-spacing: .5px; font-style: normal;
