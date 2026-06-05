@@ -682,6 +682,12 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
+/* 전체데이터 열 드래그 */
+.th-draggable { cursor: grab; user-select: none; }
+.th-draggable:active { cursor: grabbing; }
+.th-dragging { opacity: .45; }
+.th-drop-target { box-shadow: inset 3px 0 0 var(--teal); background: rgba(0,184,169,.08); }
+
 .bk-row { display: flex; align-items: center; gap: 10px; }
 .bk-name { min-width: 52px; font-size: 11.5px; font-weight: 700; color: var(--navy); }
 .bk-bar-wrap { flex: 1; height: 6px; background: var(--gray100); border-radius: 3px; overflow: hidden; }
@@ -1054,7 +1060,9 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">전체 데이터</div>
         <div class="page-sub" id="tblCount">0건</div>
       </div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:11px;color:var(--gray400);">↔ 열 제목을 드래그해 순서 변경</span>
+        <button class="btn btn-sm" onclick="resetColumnOrder()" title="열 순서 기본값으로">↺ 열 초기화</button>
         <button class="btn btn-sm" onclick="deleteByFilter()" style="background:var(--red-l);color:var(--red);border-color:var(--red);">🗑 필터삭제</button>
         <button class="btn btn-sm" onclick="exportExcel()">⬇ 내보내기</button>
       </div>
@@ -1372,6 +1380,34 @@ let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let pendingRows = [];
 let previewShowAll = false;
 let partnerExpanded = {};
+// 협력사별/고객별 정렬 상태
+let partnerSort = { field:'cost', dir:'desc' };
+let clientSort  = { field:'cost', dir:'desc' };
+function sortPartnerBy(field){
+  if(partnerSort.field===field) partnerSort.dir = partnerSort.dir==='asc'?'desc':'asc';
+  else partnerSort = {field, dir: (field==='name'||field==='branch')?'asc':'desc'};
+  renderPartner();
+}
+function sortClientBy(field){
+  if(clientSort.field===field) clientSort.dir = clientSort.dir==='asc'?'desc':'asc';
+  else clientSort = {field, dir:(field==='client'||field==='partner'||field==='branch')?'asc':'desc'};
+  renderClient();
+}
+// 정렬 화살표 표시
+function sortArrow(state, field){
+  if(state.field!==field) return '<span style="opacity:.25;">↕</span>';
+  return state.dir==='asc' ? '▲' : '▼';
+}
+// 공통 비교 함수 생성
+function makeComparator(state, getters){
+  const g = getters[state.field] || getters._default;
+  const dir = state.dir==='asc'?1:-1;
+  return (a,b)=>{
+    const va=g(a), vb=g(b);
+    if(typeof va==='string') return dir*va.localeCompare(vb,'ko');
+    return dir*((va||0)-(vb||0));
+  };
+}
 let dupResult = { dupIdx: [], verdict: 'clean' };  // AI 중복 검증 결과
 let selBranch = '';
 let upFile = null;
@@ -1815,7 +1851,7 @@ function renderDash() {
   if (branch) data = data.filter(r=>r['지사']===branch);
 
   document.getElementById('dashSub').textContent =
-    `${periodLabel(+y1,+m1,+y2,+m2)} · ${branch||'전체 지사'} · ${data.length}건`;
+    `${periodLabel(+y1,+m1,+y2,+m2)} · ${branch||'전체 지사'}`;
 
   const rev  = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
   const cost = data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
@@ -1829,7 +1865,7 @@ function renderDash() {
   document.getElementById('kRevS').textContent  = fmt(rev)+'원';
   document.getElementById('kCostS').textContent = fmt(cost)+'원';
   document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
-  document.getElementById('kCntS').textContent  = '전체 '+data.length+'건';
+  document.getElementById('kCntS').textContent  = '협력사 ' + pnrs.length + '개사';
 
   renderMonthChart(data, lo, hi);
   renderBranchKpi(data);
@@ -2029,9 +2065,81 @@ function resetTableFilters() {
   renderTable();
 }
 
+// ══════════════════════════════════════════════════════
+// 전체데이터 열 순서 드래그 변경
+// ══════════════════════════════════════════════════════
+const TBL_COL_COUNT = 16;
+let colOrder = [...Array(TBL_COL_COUNT).keys()];
+let _origThs = null, _origCols = null, _colDragReady = false;
+try { const sv=JSON.parse(localStorage.getItem('tblColOrder')||'null');
+  if(Array.isArray(sv)&&sv.length===TBL_COL_COUNT) colOrder=sv; } catch(e){}
+
+function _cacheTableOriginals(){
+  const head=document.getElementById('tblHead'); if(!head) return false;
+  const table=head.closest('table');
+  if(!_origThs){ _origThs=[...head.querySelector('tr').children]; }
+  if(!_origCols){ const cg=table.querySelector('colgroup'); _origCols=cg?[...cg.children]:[]; }
+  // 원본 인덱스 표시 (한 번만)
+  _origThs.forEach((th,i)=>{ th.dataset.col=i; th.setAttribute('draggable','true'); th.classList.add('th-draggable'); });
+  return true;
+}
+function setupColDrag(){
+  if(_colDragReady) return;
+  if(!_cacheTableOriginals()) return;
+  _origThs.forEach(th=>{
+    th.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', th.dataset.col);
+      e.dataTransfer.effectAllowed='move';
+      th.classList.add('th-dragging');
+    });
+    th.addEventListener('dragend', ()=>{ th.classList.remove('th-dragging'); document.querySelectorAll('.th-drop-target').forEach(x=>x.classList.remove('th-drop-target')); });
+    th.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; th.classList.add('th-drop-target'); });
+    th.addEventListener('dragleave', ()=>th.classList.remove('th-drop-target'));
+    th.addEventListener('drop', e=>{
+      e.preventDefault(); th.classList.remove('th-drop-target');
+      const src=+e.dataTransfer.getData('text/plain'), dst=+th.dataset.col;
+      moveColumn(src,dst);
+    });
+  });
+  _colDragReady=true;
+}
+function moveColumn(src,dst){
+  if(src===dst||isNaN(src)||isNaN(dst)) return;
+  const from=colOrder.indexOf(src), to=colOrder.indexOf(dst);
+  if(from<0||to<0) return;
+  colOrder.splice(from,1);
+  colOrder.splice(to,0,src);
+  try{ localStorage.setItem('tblColOrder',JSON.stringify(colOrder)); }catch(e){}
+  applyTableColOrder();
+}
+function resetColumnOrder(){
+  colOrder=[...Array(TBL_COL_COUNT).keys()];
+  try{ localStorage.removeItem('tblColOrder'); }catch(e){}
+  applyTableColOrder();
+  toast('열 순서를 기본값으로 되돌렸습니다');
+}
+function applyTableColOrder(){
+  const head=document.getElementById('tblHead'); if(!head) return;
+  if(!_cacheTableOriginals()) return;
+  const table=head.closest('table');
+  // 헤더 재배치 (원본 노드 사용)
+  const htr=head.querySelector('tr');
+  colOrder.forEach(i=>{ if(_origThs[i]) htr.appendChild(_origThs[i]); });
+  // colgroup 재배치
+  const cg=table.querySelector('colgroup');
+  if(cg) colOrder.forEach(i=>{ if(_origCols[i]) cg.appendChild(_origCols[i]); });
+  // 본문: 16칸짜리 행만 재배치
+  table.querySelectorAll('#tblBody tr').forEach(tr=>{
+    if(tr.children.length!==TBL_COL_COUNT) return;
+    const cells=[...tr.children];
+    colOrder.forEach(i=>tr.appendChild(cells[i]));
+  });
+}
+
 function renderTable() {
   renderBatchList();
   updateTableDropdowns();
+  setupColDrag();
   const tb = document.getElementById('tblBody');
 
   // 조회 버튼을 누르기 전: 빈 안내 상태 유지
@@ -2070,7 +2178,7 @@ function renderTable() {
   const rawData = filteredIndices.map(i=>allData[i]);
   const data    = sortData(rawData);
   document.getElementById('tblCount').textContent='총 '+data.length+'건'+(sortField?` · ${sortField} ${sortDir==='asc'?'▲':'▼'}`:'');
-  if(!data.length){tb.innerHTML='<tr><td colspan="16" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';return;}
+  if(!data.length){tb.innerHTML='<tr><td colspan="16" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';applyTableColOrder();return;}
   const limit = tableShowAll ? data.length : 200;
   const shown = data.slice(0, limit);
   // 합계 행 (필터된 전체 기준)
@@ -2078,12 +2186,13 @@ function renderTable() {
   const tCost= data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
   const tCI  = data.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0);
   const totalRow = `<tr style="background:var(--teal-ll);font-weight:800;">
-    <td colspan="9" style="text-align:right;padding:9px 10px;color:var(--navy);">합계 (${data.length}건)</td>
+    <td style="color:var(--navy);white-space:nowrap;">합계 ${data.length}건</td>
+    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
     <td class="num" style="color:var(--navy);">${fmt(tRev)}</td>
     <td class="num" style="color:var(--navy);">${fmt(tCost)}</td>
     <td class="num" style="color:var(--green);">${fmt(tCI)}</td>
     <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
-    <td colspan="3"></td>
+    <td></td><td></td><td></td>
   </tr>`;
   tb.innerHTML = totalRow + shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
@@ -2117,6 +2226,7 @@ function renderTable() {
       </button>
     </td></tr>`;
   }
+  applyTableColOrder();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2146,8 +2256,9 @@ function renderPartner() {
   const colLbl = s => multiYear ? `${String(s.y).slice(2)}.${s.m}` : `${s.m}월`;
   const totalCols = 2 + span.length + 2;
 
-  // ── 협력사별 ──
-  head.innerHTML = `<tr><th>협력사명</th><th>지사</th>${span.map(s=>`<th style="text-align:right">${colLbl(s)}</th>`).join('')}<th style="text-align:right">누계(하불)</th><th style="text-align:right">이익률</th><th style="text-align:right">고객수</th></tr>`;
+  // ── 협력사별 (헤더 클릭 시 정렬) ──
+  const pTh=(label,field,align)=>`<th style="text-align:${align||'left'};cursor:pointer;white-space:nowrap;" onclick="sortPartnerBy('${field}')">${label} ${sortArrow(partnerSort,field)}</th>`;
+  head.innerHTML = `<tr>${pTh('협력사명','name')}${pTh('지사','branch')}${span.map(s=>pTh(colLbl(s),'m:'+colKey(s),'right')).join('')}${pTh('누계(하불)','cost','right')}${pTh('이익률','rate','right')}${pTh('고객수','clients','right')}</tr>`;
   const pMap={};
   data.forEach(r=>{
     const name=(r['협력사명']||'미확인');
@@ -2161,7 +2272,19 @@ function renderPartner() {
     pMap[key].ci  +=(+r['공헌이익(원)']||0);
     if(r['고객(화주)']) pMap[key].clients.add(r['고객(화주)']);
   });
-  const rows=Object.values(pMap).sort((a,b)=>b.cost-a.cost);
+  const rows=Object.values(pMap);
+  // 정렬 적용
+  const pGetters={
+    name:r=>r.name, branch:r=>r.branch, cost:r=>r.cost,
+    rate:r=>r.rev?r.ci/r.rev:0, clients:r=>r.clients.size,
+    _default:r=>r.cost,
+  };
+  if(partnerSort.field.startsWith('m:')){
+    const k=partnerSort.field.slice(2);
+    rows.sort(makeComparator(partnerSort,{[partnerSort.field]:r=>r.ms[k]||0,_default:r=>r.ms[k]||0}));
+  } else {
+    rows.sort(makeComparator(partnerSort,pGetters));
+  }
   if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
     document.getElementById('partnerSub').textContent=`협력사별 · 0개사 · ${periodLabel(+y1,+m1,+y2,+m2)}`;return;}
   document.getElementById('partnerSub').textContent=`협력사별 · ${rows.length}개사 · ${periodLabel(+y1,+m1,+y2,+m2)}`;
@@ -2256,12 +2379,11 @@ function renderClient() {
   const colLbl = s => multiYear ? `${String(s.y).slice(2)}.${s.m}` : `${s.m}월`;
   const totalCols = 3 + span.length + 2;
 
+  const cTh=(label,field,align)=>`<th style="text-align:${align||'left'};cursor:pointer;white-space:nowrap;" onclick="sortClientBy('${field}')">${label} ${sortArrow(clientSort,field)}</th>`;
   head.innerHTML=`<tr>
-    <th>고객(화주)</th><th>협력사명</th><th>지사</th>
-    ${span.map(s=>`<th style="text-align:right">${colLbl(s)}</th>`).join('')}
-    <th style="text-align:right">누계(하불)</th>
-    <th style="text-align:right">이익률</th>
-    <th style="text-align:right">건수</th>
+    ${cTh('고객(화주)','client')}${cTh('협력사명','partner')}${cTh('지사','branch')}
+    ${span.map(s=>cTh(colLbl(s),'m:'+colKey(s),'right')).join('')}
+    ${cTh('누계(하불)','cost','right')}${cTh('이익률','rate','right')}${cTh('건수','cnt','right')}
   </tr>`;
 
   const cMap={};
@@ -2275,7 +2397,17 @@ function renderClient() {
     cMap[key].ci  +=(+r['공헌이익(원)']||0);
     cMap[key].cnt++;
   });
-  const rows=Object.values(cMap).sort((a,b)=>b.cost-a.cost);
+  const rows=Object.values(cMap);
+  const cGetters={
+    client:r=>r.client, partner:r=>r.partner, branch:r=>r.branch,
+    cost:r=>r.cost, rate:r=>r.rev?r.ci/r.rev:0, cnt:r=>r.cnt, _default:r=>r.cost,
+  };
+  if(clientSort.field.startsWith('m:')){
+    const k=clientSort.field.slice(2);
+    rows.sort(makeComparator(clientSort,{[clientSort.field]:r=>r.ms[k]||0,_default:r=>r.ms[k]||0}));
+  } else {
+    rows.sort(makeComparator(clientSort,cGetters));
+  }
   if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
     document.getElementById('clientSub').textContent=`고객별 · 0개 고객 · ${periodLabel(+y1,+m1,+y2,+m2)}`;return;}
   document.getElementById('clientSub').textContent=`고객별 · ${rows.length}개 고객 · ${periodLabel(+y1,+m1,+y2,+m2)}`;
