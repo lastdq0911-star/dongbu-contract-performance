@@ -67,21 +67,23 @@ body {
 }
 /* 세방 CI 로고 — 좌측 */
 .sebang-ci-logo {
-  display: flex; align-items: baseline; gap: 6px;
-  flex-shrink: 0;
+  display: flex; align-items: flex-end; gap: 5px;
+  flex-shrink: 0; line-height: 1;
 }
 .sebang-wordmark {
-  display: flex; align-items: baseline;
-  font-family: 'SEBANG_Gothic', 'Barlow Condensed', sans-serif;
+  display: flex; align-items: flex-end; gap: 0;
+  font-family: 'SEBANG_Gothic', sans-serif;
   font-style: normal; font-weight: normal; line-height: 1;
-  letter-spacing: 0px; color: #fff;
+  letter-spacing: -0.5px; color: #fff;
 }
-.sebang-wordmark .se  { font-size: 30px; }
-.sebang-wordmark .bang { font-size: 30px; }
+/* SE 크게, BANG 작게 — CI 원본 비율 */
+.sebang-wordmark .se   { font-size: 34px; }
+.sebang-wordmark .bang { font-size: 22px; margin-bottom: 3px; }
 .sebang-corp {
-  font-size: 11px; font-weight: 600; color: rgba(255,255,255,.65);
-  letter-spacing: .5px; font-style: normal;
+  font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,.6);
+  letter-spacing: .3px; font-style: normal;
   font-family: 'Noto Sans KR', sans-serif;
+  margin-bottom: 2px;
 }
 /* 제목 — 정중앙 (absolute) */
 .header-center {
@@ -556,6 +558,8 @@ td.bold { font-weight: 700; color: var(--navy); }
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
 .bar-col.active-month .bar-lbl { color: var(--teal); font-weight: 700; }
 .bar-col.active-month .bar-stack { background: rgba(0,184,169,.06); border-radius: 4px; }
+.bar-col.no-data .bar-lbl { color: var(--gray200); }
+.bar-col.no-data .bar-stack { border-bottom: 1px dashed var(--gray200); }
 .bar-top-lbl {
   font-size: 7px; font-weight: 700; white-space: nowrap;
   writing-mode: vertical-rl; transform: rotate(180deg);
@@ -1664,7 +1668,7 @@ function renderMonthChart(data) {
   });
   const maxV = Math.max(...byM.map(b=>Math.max(b.rev,b.cost,b.ci)),1);
   const BAR_MAX = 180; // px
-  const h = v => Math.max(Math.round((v/maxV)*BAR_MAX), v>0?2:0);
+  const h = v => v > 0 ? Math.max(Math.round((v/maxV)*BAR_MAX), 3) : 0;
 
   el.innerHTML = byM.map((d,i)=>{
     const isActive = selMonth === String(i+1);
@@ -1675,7 +1679,7 @@ function renderMonthChart(data) {
       <div class="bar-top-lbl" style="color:var(--green);" title="${i+1}월 공헌이익">${fmtB(d.ci)}</div>
     ` : '';
     return `
-    <div class="bar-col${isActive?' active-month':''}">
+    <div class="bar-col${isActive?' active-month':''}${!hasData?' no-data':''}">
       <div style="display:flex;gap:2px;justify-content:center;flex-shrink:0;min-height:42px;align-items:flex-end;">${topLbls}</div>
       <div class="bar-stack">
         <div class="bar-seg" style="height:${h(d.rev)}px;background:var(--teal);opacity:.35;" data-tip="${i+1}월 매출: ${fmtB(d.rev)}"></div>
