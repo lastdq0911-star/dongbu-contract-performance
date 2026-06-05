@@ -740,6 +740,9 @@ td.bold { font-weight: 700; color: var(--navy); }
   <button class="nav-item" data-view="client" onclick="goView('client', this)">
     <span class="ni">👤</span>고객별
   </button>
+  <button class="nav-item" data-view="batch" onclick="goView('batch', this)">
+    <span class="ni">🗂</span>배치관리
+  </button>
 </nav>
 
 <!-- ══ MAIN WRAP ════════════════════════════════════════ -->
@@ -1245,6 +1248,51 @@ td.bold { font-weight: 700; color: var(--navy); }
     </div>
   </div><!-- /view-client -->
 
+  <!-- ══════════════ VIEW: 배치관리 ══════════════════════ -->
+  <div class="view" id="view-batch">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div class="page-title">배치 관리</div>
+        <div class="page-sub" id="batchSub">업로드 단위(배치)별 데이터 관리 · 삭제</div>
+      </div>
+      <span id="batchAdminHint" style="font-size:12px;color:var(--gray400);"></span>
+    </div>
+    <div class="filter-row">
+      <label>지사</label>
+      <select class="fsel" id="bmBranch" onchange="renderBatchManager()">
+        <option value="">전체</option>
+        <option>부산지사</option><option>울산지사</option>
+        <option>경북지사</option><option>강원지사</option>
+      </select>
+      <div class="fsep"></div>
+      <label>연도</label>
+      <select class="fsel" id="bmYear" onchange="renderBatchManager()">
+        <option value="">전체</option><option>2026</option><option>2025</option>
+      </select>
+      <div class="fsep"></div>
+      <label>월</label>
+      <select class="fsel" id="bmMonth" onchange="renderBatchManager()">
+        <option value="">전체</option>
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+        <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+      </select>
+      <div class="fsep"></div>
+      <input class="finp" id="bmSrch" placeholder="🔍 업로더·라벨 검색" oninput="renderBatchManager()" style="min-width:120px;">
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap">
+        <table id="batchTable">
+          <thead id="batchHead"></thead>
+          <tbody id="batchManagerBody">
+            <tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">배치 없음</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /view-batch -->
+
 </div><!-- /main-wrap -->
 
 </div><!-- /app-body -->
@@ -1339,6 +1387,7 @@ function goView(name, btn) {
   if (name==='table')   renderTable();
   if (name==='partner') renderPartner();
   if (name==='client')  renderClient();
+  if (name==='batch')   renderBatchManager();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1572,10 +1621,82 @@ async function _deleteBatch(batchId) {
     renderBatchList();
     renderTable();
     renderDash();
+    renderBatchManager();
     toast(`'${b.label}' ${b.count}건 삭제 완료`);
   } catch(e) {
     toast('⚠ 삭제 실패: '+(e.message||e));
   }
+}
+
+// ══════════════════════════════════════════════════════
+// 배치 관리 화면
+// ══════════════════════════════════════════════════════
+function renderBatchManager() {
+  const head = document.getElementById('batchHead');
+  const tb   = document.getElementById('batchManagerBody');
+  const hint = document.getElementById('batchAdminHint');
+  if (!head || !tb) return;
+
+  hint.textContent = isAdminUser()
+    ? '🔑 관리자 — 배치 삭제 가능'
+    : '조회 전용 (삭제는 관리자만 가능)';
+
+  const fBranch = document.getElementById('bmBranch').value;
+  const fYear   = document.getElementById('bmYear').value;
+  const fMonth  = document.getElementById('bmMonth').value;
+  const q       = document.getElementById('bmSrch').value.trim().toLowerCase();
+
+  // 배치별 실데이터 집계 (매출/하불/공헌이익) — allData 기준 재계산
+  let rows = batches.map(b => {
+    const recs = allData.filter(r => r._batchId === b.id);
+    const rev  = recs.reduce((s,r)=>s+(+r['매출(원)']||0),0);
+    const cost = recs.reduce((s,r)=>s+(+r['하불(원)']||0),0);
+    return { ...b, realCount: recs.length, rev, cost, ci: rev-cost };
+  });
+
+  // 필터
+  rows = rows.filter(b => {
+    if (fBranch && b.branch !== fBranch)               return false;
+    if (fYear   && String(b.year) !== String(fYear))   return false;
+    if (fMonth  && String(b.month) !== String(fMonth)) return false;
+    if (q) {
+      const hay = `${b.label} ${b.uploader||''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  // 최신순 (연·월 내림차순)
+  rows.sort((a,b)=> (b.year-a.year) || (b.month-a.month) || String(a.branch).localeCompare(b.branch));
+
+  document.getElementById('batchSub').textContent =
+    `총 ${rows.length}개 배치 · ${rows.reduce((s,b)=>s+b.realCount,0)}건`;
+
+  head.innerHTML = `<tr>
+    <th>지사</th><th>기간</th><th style="text-align:right">건수</th>
+    <th style="text-align:right">매출</th><th style="text-align:right">하불</th>
+    <th style="text-align:right">공헌이익</th><th>업로더 / 등록시각</th>
+    <th style="text-align:center">관리</th>
+  </tr>`;
+
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 배치 없음</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = rows.map(b => `<tr>
+    <td><span class="badge ${bc(b.branch)}">${(b.branch||'—').replace('지사','')}</span></td>
+    <td class="bold">${b.year}년 ${b.month}월</td>
+    <td class="num">${b.realCount}건</td>
+    <td class="num">${fmt(b.rev)}</td>
+    <td class="num" style="font-weight:700;">${fmt(b.cost)}</td>
+    <td class="num" style="color:var(--green);">${fmt(b.ci)}</td>
+    <td style="font-size:11.5px;"><span style="color:var(--teal);font-weight:700;">👤${b.uploader||'?'}</span> <span style="color:var(--gray300);">${b.ts||''}</span></td>
+    <td style="text-align:center;">
+      ${isAdminUser()
+        ? `<button onclick="deleteBatch('${b.id}')" style="border:none;background:var(--red-l);color:var(--red);border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>`
+        : `<span style="color:var(--gray300);font-size:11px;">—</span>`}
+    </td>
+  </tr>`).join('');
 }
 
 // ══════════════════════════════════════════════════════
@@ -2880,6 +3001,7 @@ loadUploaderId();
     sbUser = sess?.user || null;
     updateAuthUI();
     renderBatchList();
+    renderBatchManager();
   });
 
   // Supabase에서 전체 데이터 로드
