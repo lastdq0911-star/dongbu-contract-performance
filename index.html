@@ -636,50 +636,6 @@ td.bold { font-weight: 700; color: var(--navy); }
 .confirm-bar.show { display: flex; }
 .confirm-bar p { font-size: 13px; font-weight: 700; color: var(--navy); }
 .confirm-bar span { font-size: 11.5px; color: var(--gray500); display: block; }
-
-/* ══ STICKY CONFIRM BANNER ════════════════════════════ */
-.sticky-confirm {
-  position: fixed;
-  top: 64px; /* 헤더 높이 바로 아래 */
-  left: 0; right: 0;
-  z-index: 150;
-  background: var(--teal);
-  color: #fff;
-  padding: 12px 20px;
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  box-shadow: 0 4px 20px rgba(0,184,169,.4);
-  animation: slideDown .3s ease;
-}
-.sticky-confirm.show { display: flex; }
-.sticky-confirm .sc-left { flex: 1; min-width: 0; }
-.sticky-confirm .sc-title {
-  font-size: 12.5px; font-weight: 800;
-  display: flex; align-items: center; gap: 6px;
-  white-space: normal; flex-wrap: wrap;
-}
-.sticky-confirm .sc-sub {
-  font-size: 11px; opacity: .8; margin-top: 2px;
-}
-.sticky-confirm .sc-btn {
-  border: none; border-radius: var(--radius-xs);
-  background: #fff; color: var(--teal);
-  font-size: 13px; font-weight: 900;
-  padding: 9px 18px; cursor: pointer;
-  font-family: inherit; flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-  transition: transform .1s;
-  white-space: nowrap;
-}
-.sticky-confirm .sc-btn:hover { transform: scale(1.03); }
-.sticky-confirm .sc-btn:active { transform: scale(.97); }
-.sticky-confirm .sc-close {
-  background: none; border: none; color: rgba(255,255,255,.6);
-  font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0;
-  line-height: 1;
-}
 @keyframes slideDown {
   from { transform: translateY(-100%); opacity: 0; }
   to   { transform: translateY(0);     opacity: 1; }
@@ -752,15 +708,6 @@ td.bold { font-weight: 700; color: var(--navy); }
   </div>
 </header>
 
-<!-- ══ STICKY CONFIRM BANNER ══════════════════════════ -->
-<div class="sticky-confirm" id="stickyConfirm">
-  <div class="sc-left">
-    <div class="sc-title">✅ 변환 완료 — 대시보드에 반영할까요?</div>
-    <div class="sc-sub" id="scSub">—</div>
-  </div>
-  <button class="sc-btn" onclick="confirmData()">반영하기 →</button>
-  <button class="sc-close" onclick="cancelUpload()" title="초기화">✕</button>
-</div>
 
 <!-- ══ APP BODY ═════════════════════════════════════════ -->
 <div class="app-body">
@@ -2221,10 +2168,6 @@ async function runAnalysis(){
     const cb=document.getElementById('confirmBar');
     cb.classList.add('show');
     document.getElementById('confirmSub').textContent=`${pendingRows.length}건 · ${selBranch} ${year}/${month}`;
-    // 상단 고정 배너도 함께 표시
-    const sc=document.getElementById('stickyConfirm');
-    sc.classList.add('show');
-    document.getElementById('scSub').textContent=`${pendingRows.length}건 변환 · ${selBranch} ${year}년 ${month}월`;
 
   } catch(err) {
     log('오류: '+err.message,'warn');
@@ -2250,7 +2193,6 @@ async function _doConfirmData(){
   const batchRec = {id:batchId, label, branch:selBranch, year:+year, month:+month, count:pendingRows.length, uploader, ts};
   pendingRows.forEach(r => { r._batchId = batchId; r._uploader = uploader; });
 
-  const sc = document.getElementById('stickyConfirm');
   try {
     const bRes = await _sb.from('batches').insert(batchRec);
     if (bRes.error) throw bRes.error;
@@ -2270,7 +2212,6 @@ async function _doConfirmData(){
   pendingRows=[];
   upBadge();
   document.getElementById('confirmBar').classList.remove('show');
-  document.getElementById('stickyConfirm').classList.remove('show');
   document.getElementById('s4t').textContent='반영 완료 ✓';
   document.getElementById('sn1').className='step-num done';
   document.getElementById('sn2').className='step-num done';
@@ -2287,10 +2228,6 @@ async function _doConfirmData(){
   }, 800);
 }
 
-function closeStickyConfirm(){
-  document.getElementById('stickyConfirm').classList.remove('show');
-}
-
 // 업로드 초기화 (반영 전 취소)
 function cancelUpload(){
   if(pendingRows.length && !confirm('변환한 데이터를 모두 취소하고 초기화할까요?')) return;
@@ -2298,7 +2235,6 @@ function cancelUpload(){
   previewShowAll=false;
   upBadge();
   clearFile();
-  document.getElementById('stickyConfirm').classList.remove('show');
   document.getElementById('confirmBar').classList.remove('show');
   document.getElementById('resultBanner').classList.remove('show');
   document.getElementById('previewArea').innerHTML='<div class="empty"><div class="ei">📋</div><p>분석 결과가 여기에 표시됩니다</p></div>';
@@ -2651,7 +2587,6 @@ function deletePreviewRow(i){
   // 카운트 표기 갱신
   const sub=`${pendingRows.length}건 · ${selBranch} ${document.getElementById('yearIn').value}/${document.getElementById('monthIn').value}`;
   document.getElementById('confirmSub').textContent=sub;
-  document.getElementById('scSub').textContent=`${pendingRows.length}건 변환 · ${selBranch} ${document.getElementById('yearIn').value}년 ${document.getElementById('monthIn').value}월`;
 }
 function renderPreview(rows){
   const area=document.getElementById('previewArea');
