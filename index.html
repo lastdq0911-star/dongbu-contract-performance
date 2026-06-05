@@ -687,20 +687,34 @@ td.bold { font-weight: 700; color: var(--navy); }
 /* ══ DASHBOARD ONE-SCREEN LAYOUT ══════════════════════ */
 #view-dash {
   height: calc(100vh - 64px - 40px);
-  display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px; overflow: hidden;
 }
 .dash-hdr { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.dash-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; flex-shrink: 0; }
-.dash-kpi .kpi-box { padding: 10px 12px; }
-.dash-kpi .kpi-val { font-size: 18px; }
-.dash-kpi .kpi-label { margin-bottom: 3px; }
-.dash-main { display: grid; grid-template-columns: 1fr 320px; gap: 8px; flex: 1; min-height: 0; }
+.dash-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; flex-shrink: 0; }
+.dash-kpi .kpi-box { padding: 8px 12px; }
+.dash-kpi .kpi-val { font-size: 17px; }
+.dash-kpi .kpi-label { margin-bottom: 2px; font-size: 11px; }
+.dash-kpi .kpi-sub  { font-size: 10px; }
+.dash-main { display: grid; grid-template-columns: 1fr 260px; gap: 6px; flex: 1; min-height: 0; }
 .dash-chart-card { display: flex; flex-direction: column; min-height: 0; }
-.dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
-.dash-chart-card .section-label { margin-bottom: 8px; flex-shrink: 0; }
-.dash-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
-.dash-right .card-inner { padding: 10px 12px; }
-.dash-right .section-label { margin-bottom: 6px; }
+.dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; }
+.dash-chart-card .section-label { margin-bottom: 6px; flex-shrink: 0; }
+.dash-right { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; }
+.dash-right .card-inner { padding: 8px 10px; }
+.dash-right .section-label { margin-bottom: 4px; }
+/* 하단 바로가기 버튼 행 */
+.dash-shortcuts { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; flex-shrink: 0; }
+.dash-sc-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 0;
+  background: var(--white); border: 1.5px solid var(--gray200);
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--gray700);
+  font-family: inherit; transition: all .15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.dash-sc-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-ll); }
+.dash-sc-btn .sc-ic { font-size: 15px; }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -761,19 +775,19 @@ td.bold { font-weight: 700; color: var(--navy); }
 <!-- ══ LEFT NAV ════════════════════════════════════════ -->
 <nav class="left-nav">
   <div class="left-nav-logo">메뉴</div>
-  <button class="nav-item active" onclick="goView('dash', this)">
+  <button class="nav-item active" data-view="dash" onclick="goView('dash', this)">
     <span class="ni">📊</span>대시보드
   </button>
-  <button class="nav-item" onclick="goView('upload', this)">
+  <button class="nav-item" data-view="upload" onclick="goView('upload', this)">
     <span class="ni">📤</span>업로드
   </button>
-  <button class="nav-item" onclick="goView('table', this)">
+  <button class="nav-item" data-view="table" onclick="goView('table', this)">
     <span class="ni">📋</span>전체데이터
   </button>
-  <button class="nav-item" onclick="goView('partner', this)">
+  <button class="nav-item" data-view="partner" onclick="goView('partner', this)">
     <span class="ni">🏢</span>협력사별
   </button>
-  <button class="nav-item" onclick="goView('client', this)">
+  <button class="nav-item" data-view="client" onclick="goView('client', this)">
     <span class="ni">👤</span>고객별
   </button>
 </nav>
@@ -899,6 +913,19 @@ td.bold { font-weight: 700; color: var(--navy); }
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 바로가기 버튼 행 -->
+    <div class="dash-shortcuts">
+      <button class="dash-sc-btn" onclick="goViewByName('table')">
+        <span class="sc-ic">📋</span>전체 데이터
+      </button>
+      <button class="dash-sc-btn" onclick="goViewByName('partner')">
+        <span class="sc-ic">🏢</span>협력사별 실적
+      </button>
+      <button class="dash-sc-btn" onclick="goViewByName('client')">
+        <span class="sc-ic">👤</span>고객별 실적
+      </button>
     </div>
 
   </div><!-- /view-dash -->
@@ -1365,6 +1392,10 @@ let upFile = null;
 // ══════════════════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════════════════
+function goViewByName(name) {
+  const btn = [...document.querySelectorAll('.nav-item')].find(b=>b.getAttribute('data-view')===name);
+  goView(name, btn || document.querySelectorAll('.nav-item')[0]);
+}
 function goView(name, btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
