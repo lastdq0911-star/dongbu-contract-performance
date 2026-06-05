@@ -552,12 +552,17 @@ td.bold { font-weight: 700; color: var(--navy); }
 .bar-col.active-month .bar-area { background: rgba(0,184,169,.06); border-radius: 4px; }
 .bar-col.no-data .bar-lbl { color: var(--gray300); }
 .bar-col.no-data .bar-area { border-bottom: 1px dashed var(--gray200); }
-/* 막대 위 숫자 레이블 */
+/* 막대 위 숫자 레이블 — 어떤 막대 색에서도 보이도록 흰 배경 알약 형태 */
 .bar-num {
-  font-size: 9.5px; font-weight: 800; color: var(--navy);
-  white-space: nowrap; line-height: 1.1; text-align: center;
-  flex-shrink: 0; height: 15px; display: flex; align-items: flex-end;
-  justify-content: center; overflow: visible;
+  flex-shrink: 0; height: 18px; margin-bottom: 3px;
+  display: flex; align-items: center; justify-content: center; overflow: visible;
+}
+.bar-num span {
+  font-size: 10px; font-weight: 800; color: var(--navy);
+  white-space: nowrap; line-height: 1;
+  background: #fff; border: 1px solid var(--gray200);
+  border-radius: 6px; padding: 2px 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
 }
 /* bar-area: 세로 공간 전부 차지, flex-grow로 비율 분배 */
 .bar-area {
@@ -844,7 +849,7 @@ td.bold { font-weight: 700; color: var(--navy); }
           <div class="card-inner">
             <div class="section-label">
               <div style="font-size:13px;">🏗</div>
-              <h3>지사별 공헌이익 달성률</h3>
+              <h3>지사별 공헌이익</h3>
             </div>
             <div class="branch-kpi" id="branchKpi">
               <div class="empty"><div class="ei">📍</div><p>데이터 없음</p></div>
@@ -997,7 +1002,7 @@ td.bold { font-weight: 700; color: var(--navy); }
     <div class="dup-warn" id="dupWarn">
       <span id="dupWarnMsg" style="flex:1;min-width:0;">—</span>
       <button class="dup-del-btn" id="dupRemoveBtn" onclick="removeDuplicateRows()" style="display:none;">중복 행 제외</button>
-      <button class="dup-del-btn" onclick="deleteDupBatch()">기존 배치 삭제</button>
+      <button class="dup-del-btn" id="dupDelBatchBtn" onclick="deleteDupBatch()" style="display:none;">기존 배치 삭제</button>
     </div>
 
     <!-- 결과 배너 -->
@@ -1806,7 +1811,7 @@ function renderMonthChart(data) {
     const rCi   = d.ci   > 0 ? Math.max(Math.round((d.ci  /maxV)*1000), 10) : 0;
     return `
     <div class="bar-col${isActive?' active-month':''}${!hasData?' no-data':''}">
-      <div class="bar-num">${topNum}</div>
+      <div class="bar-num">${topNum?`<span>${topNum}</span>`:''}</div>
       <div class="bar-area">
         <div class="bar-spacer" style="flex:${Math.max(spacer,0)}"></div>
         <div class="bar-stack" style="flex:${rRev}">
@@ -1828,16 +1833,15 @@ function renderBranchKpi(data) {
     const rev=bd.reduce((s,r)=>s+(+r['매출(원)']||0),0);
     const cost=bd.reduce((s,r)=>s+(+r['하불(원)']||0),0);
     const ci=rev-cost;
-    const tgt=TARGETS[b];
-    const pp=tgt?Math.min((ci/tgt)*100,100):0;
-    return {b,ci,tgt,pp,color:BCOLORS[i]};
+    return {b,ci,rev,color:BCOLORS[i]};
   });
   if (!data.length) { el.innerHTML='<div class="empty"><div class="ei">📍</div><p>데이터 없음</p></div>'; return; }
+  // 막대는 가장 큰 지사 공헌이익 대비 비율
+  const maxCi = Math.max(...rows.map(r=>r.ci), 1);
   el.innerHTML = rows.map(r=>`
     <div class="bk-row">
       <div class="bk-name">${r.b.replace('지사','')}</div>
-      <div class="bk-bar-wrap"><div class="bk-bar" style="width:${r.pp}%;background:${r.color};"></div></div>
-      <div class="bk-pct" style="color:${r.color};">${r.tgt?Math.round(r.pp)+'%':'—'}</div>
+      <div class="bk-bar-wrap"><div class="bk-bar" style="width:${Math.max(r.ci>0?(r.ci/maxCi)*100:0,0)}%;background:${r.color};"></div></div>
       <div class="bk-val">${fmtB(r.ci)}</div>
     </div>`).join('');
 }
@@ -2521,6 +2525,7 @@ function runDupVerification(rows){
   const dupWarn = document.getElementById('dupWarn');
   const msg = document.getElementById('dupWarnMsg');
   const removeBtn = document.getElementById('dupRemoveBtn');
+  const delBatchBtn = document.getElementById('dupDelBatchBtn');
   dupWarn.classList.remove('block','clean');
 
   // 기존 전체 데이터 지문 집합
@@ -2560,6 +2565,9 @@ function runDupVerification(rows){
   // 용역별 분포 로그
   const catSummary = Object.entries(catDup).map(([c,n])=>`${c} ${n}건`).join(' / ');
   log(`AI 검증 결과: 전체 ${total}건 중 ${dup}건 중복${catSummary?` (${catSummary})`:''} — 판정: ${verdict}`, dup?'warn':'ok');
+
+  // '기존 배치 삭제' 버튼: 중복이 있고(이상아님) + 같은 지사·연·월 기존 배치가 있고 + 관리자일 때만
+  delBatchBtn.style.display = (verdict!=='clean' && sameBatch && isAdminUser()) ? '' : 'none';
 
   if (verdict==='clean') {
     dupWarn.classList.add('show','clean');
