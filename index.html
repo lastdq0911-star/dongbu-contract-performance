@@ -759,7 +759,7 @@ td.bold { font-weight: 700; color: var(--navy); }
     <div class="sc-sub" id="scSub">—</div>
   </div>
   <button class="sc-btn" onclick="confirmData()">반영하기 →</button>
-  <button class="sc-close" onclick="closeStickyConfirm()" title="닫기">✕</button>
+  <button class="sc-close" onclick="cancelUpload()" title="초기화">✕</button>
 </div>
 
 <!-- ══ APP BODY ═════════════════════════════════════════ -->
@@ -1063,7 +1063,10 @@ td.bold { font-weight: 700; color: var(--navy); }
         </div>
         <div class="confirm-bar" id="confirmBar">
           <div><p>✅ 실적관리에 반영할까요?</p><span id="confirmSub">—</span></div>
-          <button class="btn btn-teal" style="width:auto;padding:10px 18px;font-size:13px;" onclick="confirmData()">반영하기</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-teal" style="width:auto;padding:10px 18px;font-size:13px;" onclick="confirmData()">반영하기</button>
+            <button onclick="cancelUpload()" title="초기화" style="background:var(--gray100);border:none;border-radius:8px;color:var(--gray500);font-size:16px;font-weight:800;cursor:pointer;padding:10px 14px;line-height:1;">✕</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1354,6 +1357,7 @@ const BCOLORS = ['var(--teal)','var(--green)','var(--gold)','#8b5cf6'];
 let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let pendingRows = [];
+let previewShowAll = false;
 let selBranch = '';
 let upFile = null;
 
@@ -2200,6 +2204,7 @@ async function runAnalysis(){
     document.getElementById('rbCost').textContent=fmtB(totCost);
     document.getElementById('rbCIR').textContent=pct(totCI,totRev);
 
+    previewShowAll=false;
     renderPreview(pendingRows);
 
     // 중복 배치 감지
@@ -2284,6 +2289,24 @@ async function _doConfirmData(){
 
 function closeStickyConfirm(){
   document.getElementById('stickyConfirm').classList.remove('show');
+}
+
+// 업로드 초기화 (반영 전 취소)
+function cancelUpload(){
+  if(pendingRows.length && !confirm('변환한 데이터를 모두 취소하고 초기화할까요?')) return;
+  pendingRows=[];
+  previewShowAll=false;
+  upBadge();
+  clearFile();
+  document.getElementById('stickyConfirm').classList.remove('show');
+  document.getElementById('confirmBar').classList.remove('show');
+  document.getElementById('resultBanner').classList.remove('show');
+  document.getElementById('previewArea').innerHTML='<div class="empty"><div class="ei">📋</div><p>분석 결과가 여기에 표시됩니다</p></div>';
+  document.getElementById('dupWarn').classList.remove('show');
+  document.getElementById('progressCard').style.display='none';
+  [1,2,3,4].forEach(n=>{snum(n,'');stxt(n,'대기 중');});
+  document.getElementById('s4t').textContent='대기 중';
+  toast('↺ 업로드 초기화됨');
 }
 
 function deleteDupBatch() {
@@ -2619,16 +2642,28 @@ function showMapUI(map){
 // ══════════════════════════════════════════════════════
 // PREVIEW
 // ══════════════════════════════════════════════════════
+function deletePreviewRow(i){
+  if(i<0||i>=pendingRows.length) return;
+  pendingRows.splice(i,1);
+  upBadge();
+  if(!pendingRows.length){ cancelUpload(); return; }
+  renderPreview(pendingRows);
+  // 카운트 표기 갱신
+  const sub=`${pendingRows.length}건 · ${selBranch} ${document.getElementById('yearIn').value}/${document.getElementById('monthIn').value}`;
+  document.getElementById('confirmSub').textContent=sub;
+  document.getElementById('scSub').textContent=`${pendingRows.length}건 변환 · ${selBranch} ${document.getElementById('yearIn').value}년 ${document.getElementById('monthIn').value}월`;
+}
 function renderPreview(rows){
   const area=document.getElementById('previewArea');
   if(!rows.length){area.innerHTML='<div class="empty"><div class="ei">🔍</div><p>추출 데이터 없음</p></div>';return;}
+  const limit = previewShowAll ? rows.length : 100;
   // 전체데이터와 동일한 컬럼 구성 (상태 열 제외)
-  area.innerHTML=`<div class="tbl-wrap"><table style="table-layout:fixed;min-width:900px;">
+  area.innerHTML=`<div class="tbl-wrap"><table style="table-layout:fixed;min-width:940px;">
     <colgroup>
       <col style="width:52px"><col style="width:50px"><col style="width:115px"><col style="width:105px">
       <col style="width:74px"><col style="width:80px"><col style="width:80px"><col style="width:55px">
       <col style="width:55px"><col style="width:105px"><col style="width:105px"><col style="width:105px">
-      <col style="width:60px"><col style="width:90px"><col style="width:0px">
+      <col style="width:60px"><col style="width:90px"><col style="width:42px">
     </colgroup>
     <thead><tr style="background:var(--navy);">
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">지사</th>
@@ -2645,8 +2680,9 @@ function renderPreview(rows){
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">공헌이익</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">이익률</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">S/O명</th>
+      <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:center;">삭제</th>
     </tr></thead>
-    <tbody>${rows.slice(0,100).map(r=>`<tr style="border-bottom:1px solid var(--gray100);">
+    <tbody>${rows.slice(0,limit).map((r,i)=>`<tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:7px 6px;white-space:nowrap;overflow:hidden;"><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
       <td style="padding:7px 6px;font-family:'DM Mono';font-size:11.5px;white-space:nowrap;">${r['연도']||''}/${r['월']||''}</td>
       <td style="padding:7px 6px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
@@ -2661,9 +2697,13 @@ function renderPreview(rows){
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--green);white-space:nowrap;">${r['공헌이익(원)']?fmt(r['공헌이익(원)']):'—'}</td>
       <td style="padding:7px 6px;text-align:right;white-space:nowrap;"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
       <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['비고']||''}">${r['비고']||'—'}</td>
+      <td style="padding:7px 6px;text-align:center;"><button onclick="deletePreviewRow(${i})" title="이 행 삭제" style="background:none;border:none;cursor:pointer;color:var(--red,#e5484d);font-size:14px;font-weight:800;line-height:1;padding:2px 4px;">✕</button></td>
     </tr>`).join('')}</tbody>
   </table></div>
-  ${rows.length>100?`<p style="text-align:center;font-size:11px;color:var(--gray400);margin-top:8px;">처음 100건 표시 / 전체 ${rows.length}건 — 반영 후 전체데이터에서 확인하세요</p>`:''}`;
+  ${(rows.length>100 && !previewShowAll)?`<div style="text-align:center;margin-top:8px;">
+    <button onclick="previewShowAll=true;renderPreview(pendingRows);" style="border:none;border-radius:8px;background:var(--teal);color:#fff;padding:9px 28px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">📋 전체 보기 (${rows.length}건 모두 표시)</button>
+    <p style="font-size:11px;color:var(--gray400);margin-top:6px;">처음 100건 표시 중 / 전체 ${rows.length}건</p>
+  </div>`:(rows.length>100?`<p style="text-align:center;font-size:11px;color:var(--gray400);margin-top:8px;">전체 ${rows.length}건 표시 중</p>`:'')}`;
 }
 
 // ══════════════════════════════════════════════════════
