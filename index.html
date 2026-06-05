@@ -658,18 +658,22 @@ td.bold { font-weight: 700; color: var(--navy); }
 .dash-kpi .kpi-sub  { font-size: 10px; }
 /* 좌측 차트 + 우측 패널 — 남은 높이를 꽉 채우되 페이지 스크롤은 없음 */
 .dash-main { display: grid; grid-template-columns: 1fr 340px; gap: 10px; flex: 1; min-height: 0; }
-.dash-chart-card { display: flex; flex-direction: column; min-height: 0; }
+/* 좌측: 월별차트(가변) + 용역구분(고정) 세로 배치 */
+.dash-left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.dash-chart-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
 .dash-chart-card .section-label { margin-bottom: 8px; flex-shrink: 0; }
-/* 차트 막대가 과하게 커지지 않도록 최대 높이 제한 + 세로 중앙 배치 */
-.dash-chart-card .chart-wrap { max-height: 420px; margin: auto 0; }
-/* 우측 패널: 내용이 많으면 패널 안에서만 스크롤 (페이지 전체는 고정) */
-.dash-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
-.dash-right .card-inner { padding: 9px 12px; }
+.dash-chart-card .chart-wrap { min-height: 0; margin: auto 0; }
+/* 용역구분 카드: 자연 높이 유지(잘림 방지) */
+.cat-card { flex-shrink: 0; }
+.cat-card .card-inner { padding: 9px 14px; }
+.cat-card .section-label { margin-bottom: 4px; }
+.cat-chart > div { padding: 4px 0 !important; }
+/* 우측 패널: 지사별 + TOP5 (둘 다 자연 높이) */
+.dash-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.dash-right > .card { flex-shrink: 0; }
+.dash-right .card-inner { padding: 10px 12px; }
 .dash-right .section-label { margin-bottom: 6px; }
-/* 지사별·협력사 카드는 자연 높이 유지(TOP5 잘림 방지), 용역구분 차트가 남는 공간 차지 */
-.dash-right > .card:nth-child(1), .dash-right > .card:nth-child(2) { flex-shrink: 0; }
-.dash-right > .card:nth-child(3) { flex: 1; min-height: 0; }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -795,22 +799,37 @@ td.bold { font-weight: 700; color: var(--navy); }
 
     <!-- Main Grid -->
     <div class="dash-main">
-      <!-- Left: 월별 차트 -->
-      <div class="card dash-chart-card">
-        <div class="card-inner">
-          <div class="section-label">
-            <div style="font-size:14px;">📊</div>
-            <h3>월별 실적 추이</h3>
-          </div>
-          <div class="chart-wrap">
-            <div class="chart-cols" id="monthChart">
-              <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
+      <!-- Left: 월별 차트 + 용역구분 -->
+      <div class="dash-left">
+        <div class="card dash-chart-card">
+          <div class="card-inner">
+            <div class="section-label">
+              <div style="font-size:14px;">📊</div>
+              <h3>월별 실적 추이</h3>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-cols" id="monthChart">
+                <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
+              <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
+              <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
             </div>
           </div>
-          <div class="chart-legend">
-            <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
+        </div>
+
+        <!-- 용역구분 (차트 아래) -->
+        <div class="card cat-card">
+          <div class="card-inner">
+            <div class="section-label">
+              <div style="font-size:13px;">📦</div>
+              <h3>용역구분별 비중</h3>
+            </div>
+            <div id="catChart" class="cat-chart">
+              <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
+            </div>
           </div>
         </div>
       </div>
@@ -842,19 +861,6 @@ td.bold { font-weight: 700; color: var(--navy); }
             </div>
             <div class="rank-list" id="topPartners">
               <div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 용역구분 -->
-        <div class="card">
-          <div class="card-inner">
-            <div class="section-label">
-              <div style="font-size:13px;">📦</div>
-              <h3>용역구분별 비중</h3>
-            </div>
-            <div id="catChart">
-              <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
             </div>
           </div>
         </div>
