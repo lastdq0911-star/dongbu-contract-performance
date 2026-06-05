@@ -110,6 +110,10 @@ body {
   max-width: 640px; margin: 0 auto;
   padding: 16px 16px 100px;
 }
+.main-wrap.wide {
+  max-width: 100%;
+  padding: 16px 20px 100px;
+}
 
 /* ══ VIEW PAGES ══════════════════════════════════════ */
 .view { display: none; }
@@ -801,18 +805,18 @@ td.bold { font-weight: 700; color: var(--navy); }
 
     <div class="filter-row">
       <label>지사</label>
-      <select class="fsel" id="fBranch" onchange="renderTable()">
+      <select class="fsel" id="fBranch" onchange="tableShowAll=false;renderTable()">
         <option value="">전체</option>
         <option>부산지사</option><option>울산지사</option>
         <option>경북지사</option><option>강원지사</option>
       </select>
       <div class="fsep"></div>
       <label>연도</label>
-      <select class="fsel" id="fYear" onchange="renderTable()">
+      <select class="fsel" id="fYear" onchange="tableShowAll=false;renderTable()">
         <option value="">전체</option><option>2026</option><option>2025</option>
       </select>
       <label>월</label>
-      <select class="fsel" id="fMonth" onchange="renderTable()">
+      <select class="fsel" id="fMonth" onchange="tableShowAll=false;renderTable()">
         <option value="">전체</option>
         <option value="1">1</option><option value="2">2</option><option value="3">3</option>
         <option value="4">4</option><option value="5">5</option><option value="6">6</option>
@@ -820,7 +824,17 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="10">10</option><option value="11">11</option><option value="12">12</option>
       </select>
       <div class="fsep"></div>
-      <input class="finp" id="srch" placeholder="🔍 협력사·고객 검색" oninput="renderTable()">
+      <label>고객</label>
+      <select class="fsel" id="fClient" onchange="tableShowAll=false;renderTable()" style="max-width:130px;">
+        <option value="">전체</option>
+      </select>
+      <div class="fsep"></div>
+      <label>협력사</label>
+      <select class="fsel" id="fPartner" onchange="tableShowAll=false;renderTable()" style="max-width:130px;">
+        <option value="">전체</option>
+      </select>
+      <div class="fsep"></div>
+      <input class="finp" id="srch" placeholder="🔍 검색" oninput="tableShowAll=false;renderTable()" style="min-width:80px;">
     </div>
 
     <div class="card" style="padding:0;overflow:hidden;">
@@ -993,6 +1007,9 @@ function goView(name, btn) {
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   btn.classList.add('active');
+  const wrap = document.querySelector('.main-wrap');
+  if (name === 'table') wrap.classList.add('wide');
+  else wrap.classList.remove('wide');
   window.scrollTo(0,0);
   if (name==='dash')    renderDash();
   if (name==='table')   renderTable();
@@ -1172,17 +1189,35 @@ function renderCatChart(data) {
 // ══════════════════════════════════════════════════════
 // TABLE
 // ══════════════════════════════════════════════════════
+let tableShowAll = false;
+
+function updateTableDropdowns() {
+  const clients  = [...new Set(allData.map(r=>r['고객(화주)']||'').filter(Boolean))].sort();
+  const partners = [...new Set(allData.map(r=>r['협력사명']||'').filter(Boolean))].sort();
+  const selC = document.getElementById('fClient');
+  const selP = document.getElementById('fPartner');
+  const prevC = selC.value; const prevP = selP.value;
+  selC.innerHTML = '<option value="">전체</option>' + clients.map(v=>`<option value="${v}">${v}</option>`).join('');
+  selP.innerHTML = '<option value="">전체</option>' + partners.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(clients.includes(prevC))  selC.value = prevC;
+  if(partners.includes(prevP)) selP.value = prevP;
+}
+
 function renderTable() {
-  const year2=document.getElementById('fYear').value;
-  const branch2=document.getElementById('fBranch').value;
-  const month2=document.getElementById('fMonth').value;
-  const q2=document.getElementById('srch').value.trim();
-  // 원본 인덱스 추적
+  updateTableDropdowns();
+  const year2   = document.getElementById('fYear').value;
+  const branch2 = document.getElementById('fBranch').value;
+  const month2  = document.getElementById('fMonth').value;
+  const client2 = document.getElementById('fClient').value;
+  const partner2= document.getElementById('fPartner').value;
+  const q2      = document.getElementById('srch').value.trim();
   filteredIndices = [];
   allData.forEach((r,idx)=>{
-    if(year2   && String(r['연도'])!==String(year2))  return;
-    if(branch2 && r['지사']!==branch2)                return;
-    if(month2  && String(r['월'])!==String(month2))   return;
+    if(year2    && String(r['연도'])!==String(year2))  return;
+    if(branch2  && r['지사']!==branch2)                return;
+    if(month2   && String(r['월'])!==String(month2))   return;
+    if(client2  && r['고객(화주)']!==client2)          return;
+    if(partner2 && r['협력사명']!==partner2)           return;
     if(q2){const s=q2.toLowerCase();if(!((r['협력사명']||'').toLowerCase().includes(s)||(r['고객(화주)']||'').toLowerCase().includes(s))) return;}
     filteredIndices.push(idx);
   });
@@ -1190,18 +1225,33 @@ function renderTable() {
   document.getElementById('tblCount').textContent='총 '+data.length+'건';
   const tb=document.getElementById('tblBody');
   if(!data.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';return;}
-  tb.innerHTML=data.slice(0,200).map((r,i)=>`<tr>
+  const limit = tableShowAll ? data.length : 200;
+  const shown = data.slice(0, limit);
+  tb.innerHTML = shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
     <td class="mono">${r['연도']||''}/${r['월']||''}</td>
-    <td class="bold" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
-    <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
+    <td class="bold" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
+    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
     <td><span class="badge ${bc(r['용역구분'])}">${r['용역구분']||'—'}</span></td>
     <td class="num">${r['하불(원)']?fmtB(r['하불(원)']):'—'}</td>
     <td class="num"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
     <td><span class="badge ${bc(r['계약상태'])}">${r['계약상태']||'—'}</span></td>
     <td><button onclick="deleteRow(${i})" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">삭제</button></td>
   </tr>`).join('');
-  if(data.length>200) tb.innerHTML+=`<tr><td colspan="9" style="text-align:center;padding:10px;color:var(--gray400);font-size:11px;">처음 200건 / 전체 ${data.length}건</td></tr>`;
+  if(!tableShowAll && data.length > 200) {
+    tb.innerHTML += `<tr><td colspan="9" style="text-align:center;padding:14px;">
+      <button onclick="tableShowAll=true;renderTable();" style="border:none;border-radius:8px;background:var(--teal);color:#fff;padding:9px 28px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
+        📋 전체 보기 (${data.length}건 모두 표시)
+      </button>
+      <div style="font-size:11px;color:var(--gray400);margin-top:6px;">현재 200건 표시 중</div>
+    </td></tr>`;
+  } else if(tableShowAll && data.length > 200) {
+    tb.innerHTML += `<tr><td colspan="9" style="text-align:center;padding:10px;">
+      <button onclick="tableShowAll=false;renderTable();" style="border:none;border-radius:8px;background:var(--gray100);color:var(--gray500);padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        접기 (200건으로 줄이기)
+      </button>
+    </td></tr>`;
+  }
 }
 
 // ══════════════════════════════════════════════════════
