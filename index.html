@@ -166,6 +166,8 @@ body {
 }
 .dup-warn.show { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .dup-warn strong { font-weight: 800; }
+.dup-warn.block { background:#fee2e2; border-color:#ef4444; color:#991b1b; }
+.dup-warn.clean { background:#dcfce7; border-color:#22c55e; color:#166534; }
 .dup-del-btn {
   border: none; background: var(--gold); color: #fff; border-radius: 6px;
   padding: 5px 12px; font-size: 12px; font-weight: 800; cursor: pointer;
@@ -978,9 +980,10 @@ td.bold { font-weight: 700; color: var(--navy); }
       </div>
     </div>
 
-    <!-- 중복 데이터 경고 -->
+    <!-- 중복 데이터 경고 (AI 상세 검증) -->
     <div class="dup-warn" id="dupWarn">
-      <span>⚠ <strong id="dupWarnLabel">—</strong> 데이터가 이미 존재합니다. 기존 데이터를 삭제한 후 새로 반영하세요.</span>
+      <span id="dupWarnMsg" style="flex:1;min-width:0;">—</span>
+      <button class="dup-del-btn" id="dupRemoveBtn" onclick="removeDuplicateRows()" style="display:none;">중복 행 제외</button>
       <button class="dup-del-btn" onclick="deleteDupBatch()">기존 배치 삭제</button>
     </div>
 
@@ -1305,6 +1308,7 @@ let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let pendingRows = [];
 let previewShowAll = false;
+let dupResult = { dupIdx: [], verdict: 'clean' };  // AI 중복 검증 결과
 let selBranch = '';
 let upFile = null;
 
@@ -2154,16 +2158,13 @@ async function runAnalysis(){
     previewShowAll=false;
     renderPreview(pendingRows);
 
-    // 중복 배치 감지
-    const dupBatch = batches.find(b=>b.branch===selBranch&&b.year===year&&b.month===month);
-    const dupWarn = document.getElementById('dupWarn');
-    if (dupBatch) {
-      document.getElementById('dupWarnLabel').textContent = dupBatch.label+' ('+dupBatch.count+'건)';
-      dupWarn.dataset.dupId = dupBatch.id;
-      dupWarn.classList.add('show');
-    } else {
-      dupWarn.classList.remove('show');
-    }
+    // AI 상세내역 중복 검증
+    snum(4,'active'); stxt(4,'AI 중복 검증 중...');
+    log('AI 중복 검증','head');
+    log('기존 데이터와 상세내역(협력사·화주·구간·금액) 대조 중...','info');
+    await sleep(250);
+    runDupVerification(pendingRows);
+    snum(4,'done');
 
     const cb=document.getElementById('confirmBar');
     cb.classList.add('show');
@@ -2179,6 +2180,13 @@ async function runAnalysis(){
 
 function confirmData(){
   if(!pendingRows.length) return;
+  if(dupResult.verdict==='full'){
+    toast('⛔ 이미 반영된 중복 데이터입니다 — 반영할 수 없습니다');
+    return;
+  }
+  if(dupResult.verdict==='partial'){
+    if(!confirm(`중복 ${dupResult.dupIdx.length}건이 포함되어 있습니다.\n그대로 반영하면 데이터가 이중 등록됩니다.\n\n[확인] 중복 포함 그대로 반영\n[취소] 중단 (중복 제외하려면 '중복 행 제외' 버튼 사용)`)) return;
+  }
   requireUploader(_doConfirmData);
 }
 async function _doConfirmData(){
@@ -2233,6 +2241,7 @@ function cancelUpload(){
   if(pendingRows.length && !confirm('변환한 데이터를 모두 취소하고 초기화할까요?')) return;
   pendingRows=[];
   previewShowAll=false;
+  dupResult={ dupIdx: [], verdict: 'clean' };
   upBadge();
   clearFile();
   document.getElementById('confirmBar').classList.remove('show');
@@ -2248,10 +2257,90 @@ function cancelUpload(){
 function deleteDupBatch() {
   const dupWarn = document.getElementById('dupWarn');
   const batchId = dupWarn.dataset.dupId;
+  if(!batchId){ toast('삭제할 기존 배치를 찾지 못했습니다'); return; }
   requireAdmin(async ()=>{
     await _deleteBatch(batchId);
     dupWarn.classList.remove('show');
+    // 삭제 후 재검증
+    runDupVerification(pendingRows);
   });
+}
+
+// ══════════════════════════════════════════════════════
+// AI 중복 검증 (상세내역 기반)
+// ══════════════════════════════════════════════════════
+// 행의 핵심 식별 필드로 지문(fingerprint) 생성
+function rowFingerprint(r){
+  const t = v => String(v??'').trim().replace(/\s+/g,'').toLowerCase();
+  const n = v => Math.round(+String(v??'').replace(/[^\d.-]/g,'')||0);
+  return [
+    t(r['지사']), r['연도'], r['월'],
+    t(r['협력사명']), t(r['고객(화주)']),
+    t(r['출발지']), t(r['도착지']),
+    t(r['톤급']), t(r['중량']),
+    n(r['매출(원)']), n(r['하불(원)'])
+  ].join('|');
+}
+
+function runDupVerification(rows){
+  const dupWarn = document.getElementById('dupWarn');
+  const msg = document.getElementById('dupWarnMsg');
+  const removeBtn = document.getElementById('dupRemoveBtn');
+  dupWarn.classList.remove('block','clean');
+
+  // 기존 전체 데이터 지문 집합 (현재 반영 대기 행 제외)
+  const existing = new Set(allData.map(rowFingerprint));
+  // 동일 지사/연도/월의 기존 배치 (삭제 버튼용)
+  const y = +document.getElementById('yearIn').value;
+  const m = +document.getElementById('monthIn').value;
+  const sameBatch = batches.find(b=>b.branch===selBranch && b.year===y && b.month===m);
+  dupWarn.dataset.dupId = sameBatch ? sameBatch.id : '';
+
+  // 상세내역 대조
+  const dupIdx = [];
+  rows.forEach((r,i)=>{ if(existing.has(rowFingerprint(r))) dupIdx.push(i); });
+
+  const total = rows.length;
+  const dup = dupIdx.length;
+  const ratio = total ? dup/total : 0;
+
+  let verdict;
+  if (dup===0)            verdict = 'clean';
+  else if (ratio >= 0.95) verdict = 'full';   // 거의 전부 중복 → 차단
+  else                    verdict = 'partial'; // 일부 중복 → 경고
+
+  dupResult = { dupIdx, verdict };
+
+  log(`AI 검증 결과: 전체 ${total}건 중 ${dup}건이 기존 데이터와 상세내역 일치`, dup?'warn':'ok');
+
+  if (verdict==='clean') {
+    dupWarn.classList.add('show','clean');
+    removeBtn.style.display='none';
+    msg.innerHTML = `✅ <strong>AI 검증 완료</strong> — 기존 데이터와 겹치는 상세내역이 없습니다. 안전하게 반영할 수 있습니다.`;
+  } else if (verdict==='full') {
+    dupWarn.classList.add('show','block');
+    removeBtn.style.display='none';
+    msg.innerHTML = `⛔ <strong>중복 데이터</strong> — ${total}건 전부(${pct(dup,total)}) 기존 데이터와 상세내역이 일치합니다. 이미 반영된 데이터로 판단되어 반영이 차단됩니다. 재반영하려면 관리자가 기존 배치를 삭제하세요.`;
+  } else {
+    dupWarn.classList.add('show');
+    removeBtn.style.display='';
+    msg.innerHTML = `⚠ <strong>일부 중복</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 상세내역이 일치합니다. 중복 ${dup}건을 제외하고 신규 ${total-dup}건만 반영할 수 있습니다.`;
+  }
+}
+
+// 중복으로 판정된 행만 제거
+function removeDuplicateRows(){
+  if(!dupResult.dupIdx.length) return;
+  const dupSet = new Set(dupResult.dupIdx);
+  pendingRows = pendingRows.filter((_,i)=>!dupSet.has(i));
+  previewShowAll = false;
+  upBadge();
+  if(!pendingRows.length){ cancelUpload(); return; }
+  renderPreview(pendingRows);
+  document.getElementById('confirmSub').textContent=
+    `${pendingRows.length}건 · ${selBranch} ${document.getElementById('yearIn').value}/${document.getElementById('monthIn').value}`;
+  toast(`✓ 중복 ${dupSet.size}건 제외 — 신규 ${pendingRows.length}건`);
+  runDupVerification(pendingRows);
 }
 
 // ══════════════════════════════════════════════════════
