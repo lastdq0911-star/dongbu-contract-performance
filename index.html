@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#00b8a9">
 <title>동부계약관리팀 · 하불실적관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
 @font-face {
@@ -740,8 +741,8 @@ td.bold { font-weight: 700; color: var(--navy); }
   <!-- 우측: 버튼들 -->
   <div class="header-right">
     <span class="rec-badge" id="recBadge">0건</span>
-    <button class="admin-btn" id="adminBtn" onclick="toggleAdminMode()" title="관리자 로그인/로그아웃">🔒 관리자</button>
-    <button class="save-btn" id="saveBtn" onclick="requireAdmin(manualSave)" title="현재 데이터를 브라우저에 저장합니다">💾 저장</button>
+    <span id="userInfo" style="display:none;font-size:11.5px;color:rgba(255,255,255,.85);font-weight:700;letter-spacing:-.2px;"></span>
+    <button class="admin-btn" id="loginBtn" onclick="toggleLogin()" title="로그인 / 로그아웃">🔑 로그인</button>
   </div>
 </header>
 
@@ -1288,36 +1289,23 @@ td.bold { font-weight: 700; color: var(--navy); }
   </div>
 </div>
 
-<!-- ══ ADMIN LOGIN MODAL ════════════════════════════════ -->
-<div class="modal-overlay" id="adminModal">
+<!-- ══ LOGIN MODAL ══════════════════════════════════════ -->
+<div class="modal-overlay" id="loginModal">
   <div class="modal-box">
-    <div class="modal-title" id="adminModalTitle">🔐 관리자 로그인</div>
-    <div class="modal-sub" id="adminModalSub">관리자 PIN을 입력하세요</div>
-    <input type="password" class="modal-inp" id="adminPinInput" maxlength="8" placeholder="• • • •"
-           onkeydown="if(event.key==='Enter')submitAdminPin()">
-    <div class="modal-err" id="adminErr"></div>
+    <div class="modal-title">🔑 로그인</div>
+    <div class="modal-sub">업로드·삭제는 로그인이 필요합니다 (조회는 누구나 가능)</div>
+    <input type="email" class="modal-inp" id="loginEmail" placeholder="이메일"
+           style="letter-spacing:0;text-align:left;font-size:14px;margin-bottom:8px;"
+           onkeydown="if(event.key==='Enter')document.getElementById('loginPw').focus()">
+    <input type="password" class="modal-inp" id="loginPw" placeholder="비밀번호"
+           style="letter-spacing:0;text-align:left;font-size:14px;margin-top:0;"
+           onkeydown="if(event.key==='Enter')submitLogin()">
+    <div class="modal-err" id="loginErr"></div>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeAdminModal()">취소</button>
-      <button class="modal-confirm" onclick="submitAdminPin()">확인</button>
+      <button class="modal-cancel" onclick="closeLoginModal()">취소</button>
+      <button class="modal-confirm" id="loginSubmitBtn" onclick="submitLogin()">로그인</button>
     </div>
-    <div class="modal-info" id="adminModalInfo">PIN을 잊으셨나요? <a onclick="resetAdminPin()">초기화 (0000)</a></div>
-  </div>
-</div>
-
-<!-- ══ PIN CHANGE MODAL ══════════════════════════════════ -->
-<div class="modal-overlay" id="pinChangeModal">
-  <div class="modal-box">
-    <div class="modal-title">🔑 PIN 변경</div>
-    <div class="modal-sub">새 PIN을 입력하세요 (숫자 4~8자리)</div>
-    <input type="password" class="modal-inp" id="newPin1" maxlength="8" placeholder="새 PIN"
-           style="letter-spacing:4px;margin-bottom:8px;" onkeydown="if(event.key==='Enter')document.getElementById('newPin2').focus()">
-    <input type="password" class="modal-inp" id="newPin2" maxlength="8" placeholder="새 PIN 확인"
-           style="letter-spacing:4px;margin-top:0;" onkeydown="if(event.key==='Enter')submitPinChange()">
-    <div class="modal-err" id="pinChangeErr"></div>
-    <div class="modal-btns">
-      <button class="modal-cancel" onclick="closePinChangeModal()">취소</button>
-      <button class="modal-confirm" onclick="submitPinChange()">변경</button>
-    </div>
+    <div class="modal-info">계정이 필요하면 관리자에게 요청하세요</div>
   </div>
 </div>
 
@@ -1425,161 +1413,153 @@ function fd(data, {year,branch,month,cat,q}={}) {
 function upBadge() { document.getElementById('recBadge').textContent = allData.length+'건'; }
 
 // ══════════════════════════════════════════════════════
-// ADMIN SYSTEM
+// SUPABASE
 // ══════════════════════════════════════════════════════
-const LS_PIN = 'dongbu_admin_pin';
-let isAdmin = false;
-let _pendingAdminCb = null;
-let _adminModalMode = 'login'; // 'login'
+const SB_URL      = 'https://qmtwrdqwnuwhosieupaq.supabase.co';
+const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtdHdyZHF3bnV3aG9zaWV1cGFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDY0MDcsImV4cCI6MjA5NjIyMjQwN30.9fSUnYpEAbqUQre4wNUcSUlFzox220DACGUc-xXmt14';
+const ADMIN_EMAIL = 'lastdq0911@gmail.com';
+const _sb = supabase.createClient(SB_URL, SB_ANON);
+let sbUser = null;
 
-function getStoredPin() {
-  return localStorage.getItem(LS_PIN) || '0000';
+// 한국어 필드 → DB 컬럼
+function rowToDb(r) {
+  return {
+    batch_id: r._batchId||'', year:+r['연도']||0, month:+r['월']||0,
+    branch:r['지사']||'', partner_name:r['협력사명']||'', client:r['고객(화주)']||'',
+    service_type:r['용역구분']||'', contract_type:r['계약유형']||'',
+    revenue:+r['매출(원)']||0, cost:+r['하불(원)']||0,
+    contribution_income:+r['공헌이익(원)']||0, contribution_rate:String(r['공헌이익률']||''),
+    ton_class:String(r['톤급']||''), weight:String(r['중량']||''),
+    billing_rate_type:String(r['청구요율구분']||''), departure:String(r['출발지']||''),
+    destination:String(r['도착지']||''), volume:String(r['물량(건/톤)']||''),
+    contract_start:String(r['계약기간_시작']||''), contract_end:String(r['계약기간_종료']||''),
+    contract_status:String(r['계약상태']||''), note:String(r['비고']||''),
+    uploader:r['_uploader']||'',
+  };
+}
+// DB 컬럼 → 한국어 필드
+function dbToRow(d) {
+  return {
+    _id:d.id, _batchId:d.batch_id, _uploader:d.uploader,
+    '연도':d.year, '월':d.month, '지사':d.branch,
+    '협력사명':d.partner_name, '고객(화주)':d.client,
+    '용역구분':d.service_type, '계약유형':d.contract_type,
+    '매출(원)':d.revenue||'', '하불(원)':d.cost||'', '공헌이익(원)':d.contribution_income||'',
+    '공헌이익률':d.contribution_rate, '톤급':d.ton_class, '중량':d.weight,
+    '청구요율구분':d.billing_rate_type, '출발지':d.departure, '도착지':d.destination,
+    '물량(건/톤)':d.volume, '계약기간_시작':d.contract_start, '계약기간_종료':d.contract_end,
+    '계약상태':d.contract_status, '비고':d.note,
+  };
 }
 
-function toggleAdminMode() {
-  if (isAdmin) {
-    isAdmin = false;
-    updateAdminUI();
-    toast('🔒 관리자 모드 종료');
-  } else {
-    _adminModalMode = 'login';
-    _pendingAdminCb = null;
-    document.getElementById('adminModalTitle').textContent = '🔐 관리자 로그인';
-    document.getElementById('adminModalSub').textContent   = '관리자 PIN을 입력하세요';
-    document.getElementById('adminModalInfo').style.display = '';
-    openAdminModal();
+async function loadFromSupabase() {
+  try {
+    const [recRes, batRes] = await Promise.all([
+      _sb.from('performance_records').select('*').order('created_at',{ascending:true}),
+      _sb.from('batches').select('*').order('created_at',{ascending:true}),
+    ]);
+    if (recRes.error) throw recRes.error;
+    if (batRes.error) throw batRes.error;
+    allData = (recRes.data||[]).map(dbToRow);
+    batches = (batRes.data||[]).map(b=>({
+      id:b.id, label:b.label, branch:b.branch, year:b.year,
+      month:b.month, count:b.count, uploader:b.uploader, ts:b.ts,
+    }));
+    upBadge();
+    renderDash();
+    if (document.getElementById('view-table').classList.contains('active')) renderTable();
+  } catch(e) {
+    console.error('Supabase load error:', e);
+    toast('⚠ 데이터 로딩 실패: '+(e.message||e));
   }
 }
 
+// saveToStorage는 Supabase 사용으로 더 이상 필요 없음 (no-op)
+function saveToStorage() {}
+
+// ══════════════════════════════════════════════════════
+// AUTH (Supabase 이메일 로그인)
+// ══════════════════════════════════════════════════════
+let _loginCb = null;
+function isAdminUser() { return sbUser?.email === ADMIN_EMAIL; }
+function isLoggedIn()  { return !!sbUser; }
+
+function toggleLogin() {
+  if (sbUser) { if (confirm('로그아웃 하시겠습니까?')) sbLogout(); }
+  else openLoginModal();
+}
+
+function openLoginModal(cb) {
+  _loginCb = cb || null;
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPw').value = '';
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('loginModal').classList.add('show');
+  setTimeout(()=>document.getElementById('loginEmail').focus(), 100);
+}
+
+function closeLoginModal() {
+  document.getElementById('loginModal').classList.remove('show');
+  _loginCb = null;
+}
+
+async function submitLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw    = document.getElementById('loginPw').value;
+  const errEl = document.getElementById('loginErr');
+  const btn   = document.getElementById('loginSubmitBtn');
+  if (!email || !pw) { errEl.textContent = '이메일과 비밀번호를 입력하세요'; return; }
+  btn.textContent = '로그인 중...'; btn.disabled = true;
+  try {
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+    sbUser = data.user;
+    updateAuthUI();
+    closeLoginModal();
+    toast('✓ '+(isAdminUser()?'관리자':'업로더')+'로 로그인되었습니다');
+    if (_loginCb) { const cb=_loginCb; _loginCb=null; cb(); }
+  } catch(e) {
+    errEl.textContent = '❌ '+(e.message||'로그인 실패');
+  } finally {
+    btn.textContent = '로그인'; btn.disabled = false;
+  }
+}
+
+async function sbLogout() {
+  await _sb.auth.signOut();
+  sbUser = null;
+  updateAuthUI();
+  renderBatchList();
+  toast('로그아웃 되었습니다');
+}
+
+function updateAuthUI() {
+  const btn  = document.getElementById('loginBtn');
+  const info = document.getElementById('userInfo');
+  if (sbUser) {
+    btn.textContent = '로그아웃'; btn.classList.add('on');
+    info.textContent = isAdminUser() ? '🔓 관리자' : '👤 '+sbUser.email.split('@')[0];
+    info.style.display = '';
+  } else {
+    btn.textContent = '🔑 로그인'; btn.classList.remove('on');
+    info.style.display = 'none';
+  }
+}
+// 기존 호출 호환용 별칭
+function updateAdminUI() { updateAuthUI(); }
+
+// 업로드: 로그인만 하면 가능
+function requireUploader(cb) {
+  if (isLoggedIn()) { cb(); return; }
+  toast('⚠ 업로드하려면 로그인이 필요합니다');
+  openLoginModal(cb);
+}
+// 삭제: 관리자 전용
 function requireAdmin(cb) {
-  if (isAdmin) { cb(); return; }
-  _pendingAdminCb = cb;
-  _adminModalMode = 'login';
-  document.getElementById('adminModalTitle').textContent = '🔐 관리자 권한 필요';
-  document.getElementById('adminModalSub').textContent   = '이 작업은 관리자 PIN이 필요합니다';
-  document.getElementById('adminModalInfo').style.display = '';
-  openAdminModal();
-}
-
-function openAdminModal() {
-  document.getElementById('adminPinInput').value = '';
-  document.getElementById('adminErr').textContent = '';
-  document.getElementById('adminModal').classList.add('show');
-  setTimeout(()=>document.getElementById('adminPinInput').focus(), 100);
-}
-
-function closeAdminModal() {
-  document.getElementById('adminModal').classList.remove('show');
-  _pendingAdminCb = null;
-}
-
-function submitAdminPin() {
-  const pin = document.getElementById('adminPinInput').value;
-  if (pin !== getStoredPin()) {
-    document.getElementById('adminErr').textContent = '❌ PIN이 올바르지 않습니다';
-    document.getElementById('adminPinInput').value = '';
-    document.getElementById('adminPinInput').focus();
-    return;
-  }
-  isAdmin = true;
-  document.getElementById('adminModal').classList.remove('show');
-  updateAdminUI();
-  toast('🔓 관리자 모드 활성화');
-  if (_pendingAdminCb) { const cb = _pendingAdminCb; _pendingAdminCb = null; cb(); }
-}
-
-function resetAdminPin() {
-  if (!confirm('PIN을 초기값(0000)으로 초기화하시겠습니까?')) return;
-  localStorage.removeItem(LS_PIN);
-  toast('PIN이 0000으로 초기화되었습니다');
-  closeAdminModal();
-}
-
-function openPinChangeModal() {
-  if (!isAdmin) { requireAdmin(openPinChangeModal); return; }
-  document.getElementById('newPin1').value = '';
-  document.getElementById('newPin2').value = '';
-  document.getElementById('pinChangeErr').textContent = '';
-  document.getElementById('pinChangeModal').classList.add('show');
-  setTimeout(()=>document.getElementById('newPin1').focus(), 100);
-}
-
-function closePinChangeModal() {
-  document.getElementById('pinChangeModal').classList.remove('show');
-}
-
-function submitPinChange() {
-  const p1 = document.getElementById('newPin1').value;
-  const p2 = document.getElementById('newPin2').value;
-  if (!/^\d{4,8}$/.test(p1)) {
-    document.getElementById('pinChangeErr').textContent = '❌ PIN은 숫자 4~8자리여야 합니다'; return;
-  }
-  if (p1 !== p2) {
-    document.getElementById('pinChangeErr').textContent = '❌ PIN이 일치하지 않습니다'; return;
-  }
-  localStorage.setItem(LS_PIN, p1);
-  closePinChangeModal();
-  toast('🔑 PIN이 변경되었습니다');
-}
-
-function updateAdminUI() {
-  const btn = document.getElementById('adminBtn');
-  if (isAdmin) {
-    btn.textContent = '🔓 관리자';
-    btn.classList.add('on');
-  } else {
-    btn.textContent = '🔒 관리자';
-    btn.classList.remove('on');
-  }
-  updateNavAdminMenu();
-}
-
-// 사이드바 하단에 PIN 변경 메뉴 동적 추가 (관리자 전용)
-function updateNavAdminMenu() {
-  let el = document.getElementById('navPinChange');
-  if (!el) {
-    el = document.createElement('button');
-    el.id = 'navPinChange';
-    el.className = 'nav-item';
-    el.style.marginTop = 'auto';
-    el.style.borderTop = '1px solid rgba(255,255,255,.08)';
-    el.style.paddingTop = '14px';
-    el.innerHTML = '<span class="ni">🔑</span>PIN 변경';
-    el.onclick = openPinChangeModal;
-    document.querySelector('.left-nav').appendChild(el);
-  }
-  el.style.display = isAdmin ? 'flex' : 'none';
-}
-
-// ══════════════════════════════════════════════════════
-// LOCAL STORAGE
-// ══════════════════════════════════════════════════════
-const LS_DATA    = 'dongbu_allData';
-const LS_BATCHES = 'dongbu_batches';
-
-function saveToStorage() {
-  try {
-    localStorage.setItem(LS_DATA,    JSON.stringify(allData));
-    localStorage.setItem(LS_BATCHES, JSON.stringify(batches));
-  } catch(e) { console.warn('저장 실패:', e); }
-}
-
-function loadFromStorage() {
-  try {
-    const d = localStorage.getItem(LS_DATA);
-    const b = localStorage.getItem(LS_BATCHES);
-    if (d) allData  = JSON.parse(d);
-    if (b) batches  = JSON.parse(b);
-  } catch(e) { console.warn('불러오기 실패:', e); }
-}
-
-function manualSave() {
-  saveToStorage();
-  const btn = document.getElementById('saveBtn');
-  btn.classList.add('saved');
-  btn.textContent = '✓ 저장됨';
-  toast('💾 저장 완료 — 다음 방문 시에도 데이터가 유지됩니다');
-  setTimeout(()=>{ btn.classList.remove('saved'); btn.textContent = '💾 저장'; }, 2500);
+  if (isAdminUser()) { cb(); return; }
+  if (isLoggedIn()) { toast('⚠ 삭제는 관리자 전용입니다'); return; }
+  toast('⚠ 삭제는 관리자 로그인이 필요합니다');
+  openLoginModal(()=>{ if (isAdminUser()) cb(); else toast('⚠ 관리자 계정이 아닙니다'); });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1596,7 +1576,7 @@ function renderBatchList() {
         <span style="color:var(--gray400);">${b.count}건</span>
         <span style="font-size:11px;color:var(--teal);font-weight:600;">👤${b.uploader||'?'}</span>
         <span style="font-size:10px;color:var(--gray300);">${b.ts}</span>
-        <button onclick="deleteBatch('${b.id}')" title="이 배치 전체 삭제" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>
+        ${isAdminUser() ? `<button onclick="deleteBatch('${b.id}')" title="이 배치 전체 삭제" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>` : ''}
       </div>`).join('')}
   </div>`;
 }
@@ -1604,18 +1584,25 @@ function renderBatchList() {
 function deleteBatch(batchId) {
   requireAdmin(()=>_deleteBatch(batchId));
 }
-function _deleteBatch(batchId) {
+async function _deleteBatch(batchId) {
   const b = batches.find(x=>x.id===batchId);
   if (!b) return;
   if (!confirm(`'${b.label}' 배치의 ${b.count}건을 모두 삭제하시겠습니까?`)) return;
-  allData  = allData.filter(r => r._batchId !== batchId);
-  batches  = batches.filter(x => x.id !== batchId);
-  saveToStorage();
-  upBadge();
-  renderBatchList();
-  renderTable();
-  renderDash();
-  toast(`'${b.label}' ${b.count}건 삭제 완료`);
+  try {
+    const r1 = await _sb.from('performance_records').delete().eq('batch_id', batchId);
+    if (r1.error) throw r1.error;
+    const r2 = await _sb.from('batches').delete().eq('id', batchId);
+    if (r2.error) throw r2.error;
+    allData = allData.filter(r => r._batchId !== batchId);
+    batches = batches.filter(x => x.id !== batchId);
+    upBadge();
+    renderBatchList();
+    renderTable();
+    renderDash();
+    toast(`'${b.label}' ${b.count}건 삭제 완료`);
+  } catch(e) {
+    toast('⚠ 삭제 실패: '+(e.message||e));
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -2227,22 +2214,38 @@ async function runAnalysis(){
 
 function confirmData(){
   if(!pendingRows.length) return;
-  requireAdmin(_doConfirmData);
+  requireUploader(_doConfirmData);
 }
-function _doConfirmData(){
+async function _doConfirmData(){
   if(!pendingRows.length) return;
   // 배치 ID 생성 및 각 행에 태깅
   const batchId  = selBranch+'-'+document.getElementById('yearIn').value+'-'+document.getElementById('monthIn').value+'-'+Date.now();
   const year     = document.getElementById('yearIn').value;
   const month    = document.getElementById('monthIn').value;
-  const uploader = (document.getElementById('uploaderIdIn').value||'').trim() || '미확인';
+  const uploader = (document.getElementById('uploaderIdIn').value||'').trim() || sbUser?.email?.split('@')[0] || '미확인';
   const label    = `${selBranch} ${year}년 ${month}월`;
+  const ts       = new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const batchRec = {id:batchId, label, branch:selBranch, year:+year, month:+month, count:pendingRows.length, uploader, ts};
   pendingRows.forEach(r => { r._batchId = batchId; r._uploader = uploader; });
+
+  const sc = document.getElementById('stickyConfirm');
+  try {
+    const bRes = await _sb.from('batches').insert(batchRec);
+    if (bRes.error) throw bRes.error;
+    // 500건씩 나눠서 INSERT
+    for (let i=0; i<pendingRows.length; i+=500) {
+      const chunk = pendingRows.slice(i, i+500).map(rowToDb);
+      const rRes = await _sb.from('performance_records').insert(chunk);
+      if (rRes.error) throw rRes.error;
+    }
+  } catch(e) {
+    toast('⚠ 저장 실패: '+(e.message||e));
+    return;
+  }
+
   allData.push(...pendingRows);
-  batches.push({id:batchId, label, branch:selBranch, year:+year, month:+month, count:pendingRows.length, uploader,
-    ts: new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});
+  batches.push(batchRec);
   pendingRows=[];
-  saveToStorage();
   upBadge();
   document.getElementById('confirmBar').classList.remove('show');
   document.getElementById('stickyConfirm').classList.remove('show');
@@ -2250,7 +2253,7 @@ function _doConfirmData(){
   document.getElementById('sn1').className='step-num done';
   document.getElementById('sn2').className='step-num done';
   document.getElementById('sn3').className='step-num done';
-  toast('✓ '+allData.length+'건 반영 완료 — 저장됨');
+  toast('✓ '+allData.length+'건 반영 완료');
   // 대시보드로 자동 이동
   setTimeout(()=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -2269,10 +2272,9 @@ function closeStickyConfirm(){
 function deleteDupBatch() {
   const dupWarn = document.getElementById('dupWarn');
   const batchId = dupWarn.dataset.dupId;
-  requireAdmin(()=>{
-    _deleteBatch(batchId);
+  requireAdmin(async ()=>{
+    await _deleteBatch(batchId);
     dupWarn.classList.remove('show');
-    toast('기존 배치 삭제 완료 — 이제 반영하기를 누르세요');
   });
 }
 
@@ -2393,28 +2395,34 @@ let filteredIndices = [];
 function deleteRow(filteredIdx){
   requireAdmin(()=>_deleteRow(filteredIdx));
 }
-function _deleteRow(filteredIdx){
+async function _deleteRow(filteredIdx){
   const realIdx = filteredIndices[filteredIdx];
   if(realIdx === undefined) return;
+  const row = allData[realIdx];
   if(!confirm('이 행을 삭제하시겠습니까?\n' +
-    (allData[realIdx]['협력사명']||'') + ' / ' +
-    (allData[realIdx]['고객(화주)']||'') + ' / ' +
-    (allData[realIdx]['하불(원)']||'') + '원')) return;
-  allData.splice(realIdx, 1);
-  // 배치 카운트 업데이트
-  const batchId = allData[realIdx]?._batchId;
-  if (batchId) { const b=batches.find(x=>x.id===batchId); if(b) b.count--; }
-  saveToStorage();
-  upBadge();
-  renderTable();
-  renderDash();
-  toast('1건 삭제 완료');
+    (row['협력사명']||'') + ' / ' +
+    (row['고객(화주)']||'') + ' / ' +
+    (row['하불(원)']||'') + '원')) return;
+  if(!row._id){ toast('⚠ 삭제 불가: ID 없음'); return; }
+  try {
+    const res = await _sb.from('performance_records').delete().eq('id', row._id);
+    if (res.error) throw res.error;
+    const batchId = row._batchId;
+    allData.splice(realIdx, 1);
+    if (batchId) { const b=batches.find(x=>x.id===batchId); if(b) b.count=Math.max(0,b.count-1); }
+    upBadge();
+    renderTable();
+    renderDash();
+    toast('1건 삭제 완료');
+  } catch(e) {
+    toast('⚠ 삭제 실패: '+(e.message||e));
+  }
 }
 
 function deleteByFilter(){
   requireAdmin(_doDeleteByFilter);
 }
-function _doDeleteByFilter(){
+async function _doDeleteByFilter(){
   const branch = document.getElementById('fBranch').value;
   const year   = document.getElementById('fYear').value;
   const month  = document.getElementById('fMonth').value;
@@ -2425,15 +2433,23 @@ function _doDeleteByFilter(){
   const target = fd(allData,{year,branch,month});
   if(!target.length){ toast('삭제할 데이터 없음'); return; }
   if(!confirm(`필터 조건의 ${target.length}건을 모두 삭제하시겠습니까?\n(${branch||'전체'} ${year||''}년 ${month||''}월)`)) return;
-  allData = allData.filter(r => {
-    if(year   && String(r['연도'])!==String(year))  return true;
-    if(branch && r['지사']!==branch)                return true;
-    if(month  && String(r['월'])!==String(month))   return true;
-    return false;
-  });
-  saveToStorage();
-  upBadge(); renderTable(); renderDash();
-  toast(`${target.length}건 삭제 완료`);
+  try {
+    let q = _sb.from('performance_records').delete();
+    if (year)   q = q.eq('year',   +year);
+    if (branch) q = q.eq('branch', branch);
+    if (month)  q = q.eq('month',  +month);
+    // 조건이 매출 0 행도 포함하도록 보장: 최소 하나의 필터가 있으므로 안전
+    const res = await q.select('id');
+    if (res.error) throw res.error;
+    const delIds = new Set((res.data||[]).map(x=>x.id));
+    allData = allData.filter(r => !delIds.has(r._id));
+    // 배치 카운트 재계산
+    batches.forEach(b => { b.count = allData.filter(r=>r._batchId===b.id).length; });
+    upBadge(); renderTable(); renderDash();
+    toast(`${target.length}건 삭제 완료`);
+  } catch(e) {
+    toast('⚠ 삭제 실패: '+(e.message||e));
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -2683,11 +2699,26 @@ function log(msg,type=''){
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
-loadFromStorage();
 upBadge();
-updateAdminUI();
 renderDash();
 loadUploaderId();
+
+(async () => {
+  // 이전 로그인 세션 복원
+  const { data: { session } } = await _sb.auth.getSession();
+  sbUser = session?.user || null;
+  updateAuthUI();
+
+  // 세션 변경 감지 (로그인/로그아웃 시 UI 갱신)
+  _sb.auth.onAuthStateChange((_event, sess) => {
+    sbUser = sess?.user || null;
+    updateAuthUI();
+    renderBatchList();
+  });
+
+  // Supabase에서 전체 데이터 로드
+  await loadFromSupabase();
+})();
 </script>
 </body>
 </html>
