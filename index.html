@@ -745,7 +745,7 @@ td.bold { font-weight: 700; color: var(--navy); }
   <button class="nav-item" data-view="client" onclick="goView('client', this)">
     <span class="ni">👤</span>고객별
   </button>
-  <button class="nav-item" data-view="batch" onclick="goView('batch', this)">
+  <button class="nav-item" data-view="batch" id="navBatch" style="display:none;" onclick="goView('batch', this)">
     <span class="ni">🗂</span>배치관리
   </button>
 </nav>
@@ -762,17 +762,23 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">대시보드</div>
         <div class="page-sub" id="dashSub">데이터를 업로드하면 현황이 표시됩니다</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <select class="fsel" id="dashYear" onchange="renderDash()">
-          <option>2026</option><option>2025</option><option>2024</option>
-        </select>
-        <select class="fsel" id="dashMonth" onchange="renderDash()">
-          <option value="">전체 월</option>
-          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select class="fsel" id="dashY1" onchange="renderDash()"></select>
+        <select class="fsel" id="dashM1" onchange="renderDash()">
+          <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
           <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
           <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
           <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
         </select>
+        <span style="color:var(--gray400);font-weight:700;">~</span>
+        <select class="fsel" id="dashY2" onchange="renderDash()"></select>
+        <select class="fsel" id="dashM2" onchange="renderDash()">
+          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+          <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12" selected>12월</option>
+        </select>
+        <div class="fsep"></div>
         <select class="fsel" id="dashBranch" onchange="renderDash()">
           <option value="">전체</option>
           <option>부산지사</option><option>울산지사</option>
@@ -849,7 +855,7 @@ td.bold { font-weight: 700; color: var(--navy); }
           <div class="card-inner">
             <div class="section-label">
               <div style="font-size:13px;">🏗</div>
-              <h3>지사별 공헌이익</h3>
+              <h3>지사별 공헌이익 누계</h3>
             </div>
             <div class="branch-kpi" id="branchKpi">
               <div class="empty"><div class="ei">📍</div><p>데이터 없음</p></div>
@@ -1168,20 +1174,17 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option>경북지사</option><option>강원지사</option>
       </select>
       <div class="fsep"></div>
-      <label>연도</label>
-      <select class="fsel" id="pYear" onchange="renderPartner()">
-        <option value="">전체</option><option>2026</option><option>2025</option>
-      </select>
-      <div class="fsep"></div>
-      <label>시작월</label>
-      <select class="fsel" id="pMonthFrom" onchange="renderPartner()">
-        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+      <label>기간</label>
+      <select class="fsel" id="pY1" onchange="renderPartner()"></select>
+      <select class="fsel" id="pM1" onchange="renderPartner()">
+        <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
-      <label>~</label>
-      <select class="fsel" id="pMonthTo" onchange="renderPartner()">
+      <span style="color:var(--gray400);font-weight:700;">~</span>
+      <select class="fsel" id="pY2" onchange="renderPartner()"></select>
+      <select class="fsel" id="pM2" onchange="renderPartner()">
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
@@ -1219,20 +1222,17 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option>경북지사</option><option>강원지사</option>
       </select>
       <div class="fsep"></div>
-      <label>연도</label>
-      <select class="fsel" id="cYear" onchange="renderClient()">
-        <option value="">전체</option><option>2026</option><option>2025</option>
-      </select>
-      <div class="fsep"></div>
-      <label>시작월</label>
-      <select class="fsel" id="cMonthFrom" onchange="renderClient()">
-        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+      <label>기간</label>
+      <select class="fsel" id="cY1" onchange="renderClient()"></select>
+      <select class="fsel" id="cM1" onchange="renderClient()">
+        <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
-      <label>~</label>
-      <select class="fsel" id="cMonthTo" onchange="renderClient()">
+      <span style="color:var(--gray400);font-weight:700;">~</span>
+      <select class="fsel" id="cY2" onchange="renderClient()"></select>
+      <select class="fsel" id="cM2" onchange="renderClient()">
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
@@ -1371,6 +1371,7 @@ let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let pendingRows = [];
 let previewShowAll = false;
+let partnerExpanded = {};
 let dupResult = { dupIdx: [], verdict: 'clean' };  // AI 중복 검증 결과
 let selBranch = '';
 let upFile = null;
@@ -1383,6 +1384,7 @@ function goViewByName(name) {
   goView(name, btn || document.querySelectorAll('.nav-item')[0]);
 }
 function goView(name, btn) {
+  if (name==='batch' && !isAdminUser()) { toast('⚠ 배치관리는 관리자 전용입니다'); return; }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
@@ -1519,11 +1521,10 @@ async function loadFromSupabase() {
     renderBatchList();
 
     const years  = [...new Set(batches.map(b=>+b.year).filter(Boolean))].sort((a,b)=>b-a);
-    const latest = years[0] || +document.getElementById('dashYear').value || new Date().getFullYear();
+    const latest = years[0] || new Date().getFullYear();
 
-    // 대시보드 연도를 최신 연도로 맞춰 바로 보이게
-    const dy = document.getElementById('dashYear');
-    if (dy && [...dy.options].some(o=>o.value==String(latest))) dy.value = String(latest);
+    // 연도 셀렉트 채우기(데이터 기반) → 기간 시작/끝 모두 최신연도로 기본 설정
+    populateYearSelects();
 
     // 2) 최신 연도 데이터 우선 로드 → 즉시 화면 표시
     const recent = await fetchAllRecords(q => q.eq('year', latest));
@@ -1613,6 +1614,15 @@ function updateAuthUI() {
     info.style.display = 'none';
   }
   if (typeof loadUploaderId === 'function') loadUploaderId();
+  // 배치관리 메뉴는 관리자에게만 노출
+  const navBatch = document.getElementById('navBatch');
+  if (navBatch) {
+    navBatch.style.display = isAdminUser() ? '' : 'none';
+    // 관리자가 아닌데 배치관리 화면에 있으면 대시보드로 이동
+    if (!isAdminUser() && document.getElementById('view-batch').classList.contains('active')) {
+      goViewByName('dash');
+    }
+  }
 }
 // 기존 호출 호환용 별칭
 function updateAdminUI() { updateAuthUI(); }
@@ -1747,17 +1757,65 @@ function renderBatchManager() {
 }
 
 // ══════════════════════════════════════════════════════
+// 기간(연·월 범위) 공통 헬퍼
+// ══════════════════════════════════════════════════════
+function periodBounds(y1,m1,y2,m2){
+  let lo = (+y1)*12+(+m1), hi = (+y2)*12+(+m2);
+  if (hi < lo) [lo,hi] = [hi,lo];   // 시작>끝이면 자동 보정
+  return {lo,hi};
+}
+function inPeriod(r,lo,hi){ const k=(+r['연도'])*12+(+r['월']); return k>=lo && k<=hi; }
+// lo~hi 사이의 모든 {y,m} 목록
+function monthSpan(lo,hi){
+  const a=[];
+  for(let k=lo;k<=hi;k++) a.push({ y:Math.floor((k-1)/12), m:((k-1)%12)+1 });
+  return a;
+}
+function periodLabel(y1,m1,y2,m2){
+  return (y1===y2 && m1===m2) ? `${y1}년 ${m1}월`
+       : `${y1}년 ${m1}월 ~ ${y2}년 ${m2}월`;
+}
+
+// 연도 셀렉트 목록 채우기 (데이터 기반)
+function populateYearSelects(){
+  const ys = new Set([new Date().getFullYear(), 2024, 2025, 2026]);
+  // 실제 데이터가 있는 연도 (기본 선택값 결정용)
+  const dataYears = new Set();
+  allData.forEach(r=>{ if(r['연도']){ ys.add(+r['연도']); dataYears.add(+r['연도']); } });
+  batches.forEach(b=>{ if(b.year){ ys.add(+b.year); dataYears.add(+b.year); } });
+  const years = [...ys].filter(Boolean).sort((a,b)=>b-a);
+  const yOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  // 기본값: 데이터가 있는 최신 연도(없으면 목록 최신)
+  const latest = dataYears.size ? Math.max(...dataYears) : years[0];
+  // 기간 시작/끝 연도 셀렉트 (기본값 = 최신연도)
+  ['dashY1','dashY2','pY1','pY2','cY1','cY2'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const cur=el.value;
+    el.innerHTML=yOpts;
+    el.value = (cur && years.includes(+cur)) ? cur : String(latest);
+  });
+  // 배치관리 연도 (전체 옵션 포함)
+  const bm=document.getElementById('bmYear');
+  if(bm){ const cur=bm.value; bm.innerHTML='<option value="">전체</option>'+yOpts; bm.value=cur; }
+}
+
+// ══════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════
 function renderDash() {
-  const year=document.getElementById('dashYear').value;
+  const y1=document.getElementById('dashY1').value;
+  const m1=document.getElementById('dashM1').value;
+  const y2=document.getElementById('dashY2').value;
+  const m2=document.getElementById('dashM2').value;
   const branch=document.getElementById('dashBranch').value;
-  const month=document.getElementById('dashMonth').value;
-  const data=fd(allData,{year,branch,month});
+  if(!y1||!y2){ return; }   // 연도 셀렉트 아직 미초기화
+  const {lo,hi}=periodBounds(y1,m1,y2,m2);
 
-  const monthLabel = month ? month+'월 · ' : '';
+  let data = allData.filter(r=>inPeriod(r,lo,hi));
+  if (branch) data = data.filter(r=>r['지사']===branch);
+
   document.getElementById('dashSub').textContent =
-    `${year}년 ${monthLabel}${branch||'전체 지사'} · ${data.length}건`;
+    `${periodLabel(+y1,+m1,+y2,+m2)} · ${branch||'전체 지사'} · ${data.length}건`;
 
   const rev  = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
   const cost = data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
@@ -1773,54 +1831,53 @@ function renderDash() {
   document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
   document.getElementById('kCntS').textContent  = '전체 '+data.length+'건';
 
-  // 차트는 선택 월 무관 연도+지사 전체 12개월 표시 (선택 월 강조)
-  const chartData = month ? fd(allData,{year,branch}) : data;
-  renderMonthChart(chartData);
+  renderMonthChart(data, lo, hi);
   renderBranchKpi(data);
   renderTopPartners(data);
   renderCatChart(data);
 }
 
-function renderMonthChart(data) {
+function renderMonthChart(data, lo, hi) {
   const el = document.getElementById('monthChart');
   if (!data.length) {
     el.innerHTML='<div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>';
     return;
   }
-  const selMonth = document.getElementById('dashMonth').value;
-  const byM = Array.from({length:12},(_,i)=>{
-    const rows=data.filter(r=>+r['월']===i+1);
+  const span = monthSpan(lo, hi);   // 기간 내 모든 {y,m}
+  const multiYear = span.length>0 && span[0].y!==span[span.length-1].y;
+  const byM = span.map(({y,m})=>{
+    const rows=data.filter(r=>+r['연도']===y && +r['월']===m);
     return {
+      y, m,
       rev: rows.reduce((s,r)=>s+(+r['매출(원)']||0),0),
       cost:rows.reduce((s,r)=>s+(+r['하불(원)']||0),0),
       ci:  rows.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0),
     };
   });
-  // 비율 계산 — 최대값 기준 0~1000 정수 (flex-grow에 사용)
   const maxV = Math.max(...byM.map(b=>b.rev),1);
   const ratio = v => v > 0 ? Math.max(Math.round((v/maxV)*1000), 15) : 0;
 
-  el.innerHTML = byM.map((d,i)=>{
-    const isActive = selMonth === String(i+1);
+  el.innerHTML = byM.map(d=>{
     const hasData = d.rev > 0 || d.cost > 0;
     const rRev  = ratio(d.rev);
-    // spacer: 빈 공간 = 1000 - 가장 큰 막대(매출) 비율
     const spacer = 1000 - rRev;
     const topNum = hasData ? fmtB(d.rev) : '';
     const rCost = d.cost > 0 ? Math.max(Math.round((d.cost/maxV)*1000), 10) : 0;
     const rCi   = d.ci   > 0 ? Math.max(Math.round((d.ci  /maxV)*1000), 10) : 0;
+    const lbl = multiYear ? `${String(d.y).slice(2)}.${d.m}` : `${d.m}월`;
+    const tipPfx = `${d.y}년 ${d.m}월`;
     return `
-    <div class="bar-col${isActive?' active-month':''}${!hasData?' no-data':''}">
+    <div class="bar-col${!hasData?' no-data':''}">
       <div class="bar-num">${topNum?`<span>${topNum}</span>`:''}</div>
       <div class="bar-area">
         <div class="bar-spacer" style="flex:${Math.max(spacer,0)}"></div>
         <div class="bar-stack" style="flex:${rRev}">
-          ${d.rev>0?`<div class="bar-seg" style="flex:${rRev};background:var(--teal);opacity:.35;" data-tip="${i+1}월 매출: ${fmtB(d.rev)}"></div>`:''}
-          ${d.cost>0?`<div class="bar-seg" style="flex:${rCost};background:var(--gold);" data-tip="${i+1}월 하불: ${fmtB(d.cost)}"></div>`:''}
-          ${d.ci>0?`<div class="bar-seg" style="flex:${rCi};background:var(--green);" data-tip="${i+1}월 공헌이익: ${fmtB(d.ci)}"></div>`:''}
+          ${d.rev>0?`<div class="bar-seg" style="flex:${rRev};background:var(--teal);opacity:.35;" data-tip="${tipPfx} 매출: ${fmtB(d.rev)}"></div>`:''}
+          ${d.cost>0?`<div class="bar-seg" style="flex:${rCost};background:var(--gold);" data-tip="${tipPfx} 하불: ${fmtB(d.cost)}"></div>`:''}
+          ${d.ci>0?`<div class="bar-seg" style="flex:${rCi};background:var(--green);" data-tip="${tipPfx} 공헌이익: ${fmtB(d.ci)}"></div>`:''}
         </div>
       </div>
-      <div class="bar-lbl">${i+1}월</div>
+      <div class="bar-lbl">${lbl}</div>
     </div>`;
   }).join('');
 }
@@ -2065,108 +2122,106 @@ function renderTable() {
 // ══════════════════════════════════════════════════════
 // PARTNER
 // ══════════════════════════════════════════════════════
-let partnerExpanded = {};
-
 function renderPartner() {
-  const year    = document.getElementById('pYear').value;
   const branch  = document.getElementById('pBranch').value;
-  const mFrom   = +document.getElementById('pMonthFrom').value || 1;
-  const mTo     = +document.getElementById('pMonthTo').value   || 12;
+  const y1=document.getElementById('pY1').value, m1=document.getElementById('pM1').value;
+  const y2=document.getElementById('pY2').value, m2=document.getElementById('pM2').value;
   const srch    = (document.getElementById('pSrch')||{value:''}).value.trim().toLowerCase();
   const head    = document.getElementById('partnerHead');
   const tb      = document.getElementById('partnerBody');
+  if(!y1||!y2) return;
+  const {lo,hi}=periodBounds(y1,m1,y2,m2);
 
-  // 필터: 연도·지사·월범위
+  // 필터: 기간·지사
   let data = allData.filter(r=>{
-    if(year   && String(r['연도'])!==String(year))  return false;
-    if(branch && r['지사']!==branch)                return false;
-    const m = +r['월']||0;
-    if(m < mFrom || m > mTo)                        return false;
+    if(!inPeriod(r,lo,hi))           return false;
+    if(branch && r['지사']!==branch) return false;
     return true;
   });
 
-  const months = [];
-  for(let m=mFrom; m<=mTo; m++) months.push(m);
-  const totalCols = 2 + months.length + 2; // 이름+지사 + 각월 + 누계+이익률
+  const span = monthSpan(lo,hi);           // [{y,m}...]
+  const multiYear = span.length>0 && span[0].y!==span[span.length-1].y;
+  const colKey = s => `${s.y}-${s.m}`;
+  const rowKey = r => `${+r['연도']}-${+r['월']}`;
+  const colLbl = s => multiYear ? `${String(s.y).slice(2)}.${s.m}` : `${s.m}월`;
+  const totalCols = 2 + span.length + 2;
 
-  {
-    // ── 협력사별 ──
-    head.innerHTML = `<tr><th>협력사명</th><th>지사</th>${months.map(m=>`<th style="text-align:right">${m}월</th>`).join('')}<th style="text-align:right">누계(하불)</th><th style="text-align:right">이익률</th><th style="text-align:right">고객수</th></tr>`;
-    const pMap={};
-    data.forEach(r=>{
-      const name=(r['협력사명']||'미확인');
-      if(srch && !name.toLowerCase().includes(srch)) return;
-      const key=name+'|'+(r['지사']||'');
-      if(!pMap[key]) pMap[key]={name,branch:r['지사']||'',ms:{},rev:0,cost:0,ci:0,clients:new Set()};
-      const m=+r['월']||1;
-      pMap[key].ms[m]=(pMap[key].ms[m]||0)+(+r['하불(원)']||0);
-      pMap[key].rev +=(+r['매출(원)']||0);
-      pMap[key].cost+=(+r['하불(원)']||0);
-      pMap[key].ci  +=(+r['공헌이익(원)']||0);
-      if(r['고객(화주)']) pMap[key].clients.add(r['고객(화주)']);
+  // ── 협력사별 ──
+  head.innerHTML = `<tr><th>협력사명</th><th>지사</th>${span.map(s=>`<th style="text-align:right">${colLbl(s)}</th>`).join('')}<th style="text-align:right">누계(하불)</th><th style="text-align:right">이익률</th><th style="text-align:right">고객수</th></tr>`;
+  const pMap={};
+  data.forEach(r=>{
+    const name=(r['협력사명']||'미확인');
+    if(srch && !name.toLowerCase().includes(srch)) return;
+    const key=name+'|'+(r['지사']||'');
+    if(!pMap[key]) pMap[key]={name,branch:r['지사']||'',ms:{},rev:0,cost:0,ci:0,clients:new Set()};
+    const mk=rowKey(r);
+    pMap[key].ms[mk]=(pMap[key].ms[mk]||0)+(+r['하불(원)']||0);
+    pMap[key].rev +=(+r['매출(원)']||0);
+    pMap[key].cost+=(+r['하불(원)']||0);
+    pMap[key].ci  +=(+r['공헌이익(원)']||0);
+    if(r['고객(화주)']) pMap[key].clients.add(r['고객(화주)']);
+  });
+  const rows=Object.values(pMap).sort((a,b)=>b.cost-a.cost);
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
+    document.getElementById('partnerSub').textContent=`협력사별 · 0개사 · ${periodLabel(+y1,+m1,+y2,+m2)}`;return;}
+  document.getElementById('partnerSub').textContent=`협력사별 · ${rows.length}개사 · ${periodLabel(+y1,+m1,+y2,+m2)}`;
+  // 합계 행
+  const mTot={}; span.forEach(s=>{const k=colKey(s);mTot[k]=rows.reduce((sm,r)=>sm+(r.ms[k]||0),0);});
+  const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0);
+  let html=`<tr style="background:var(--navy);font-weight:800;">
+    <td style="color:#fff;">합계</td>
+    <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개사</td>
+    ${span.map(s=>{const k=colKey(s);return `<td class="num" style="color:#fff;font-size:11.5px;">${mTot[k]?fmt(mTot[k]):'—'}</td>`;}).join('')}
+    <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
+    <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
+    <td class="num" style="color:rgba(255,255,255,.6);"></td>
+  </tr>`;
+  rows.forEach(r=>{
+    const key=r.name+'|'+r.branch;
+    const open=!!partnerExpanded[key];
+    const clMap={};
+    data.filter(d=>(d['협력사명']||'미확인')===r.name&&(d['지사']||'')===r.branch).forEach(d=>{
+      const cl=d['고객(화주)']||'미확인';
+      if(!clMap[cl]) clMap[cl]={rev:0,cost:0,ci:0,cnt:0,ms:{}};
+      const mk=rowKey(d);
+      clMap[cl].ms[mk]=(clMap[cl].ms[mk]||0)+(+d['하불(원)']||0);
+      clMap[cl].rev +=(+d['매출(원)']||0);
+      clMap[cl].cost+=(+d['하불(원)']||0);
+      clMap[cl].ci  +=(+d['공헌이익(원)']||0);
+      clMap[cl].cnt++;
     });
-    const rows=Object.values(pMap).sort((a,b)=>b.cost-a.cost);
-    if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;return;}
-    document.getElementById('partnerSub').textContent=`협력사별 · ${rows.length}개사 · ${mFrom}월~${mTo}월`;
-    // 합계 행
-    const mTot={}; months.forEach(m=>mTot[m]=rows.reduce((s,r)=>s+(r.ms[m]||0),0));
-    const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0);
-    let html=`<tr style="background:var(--navy);font-weight:800;">
-      <td style="color:#fff;">합계</td>
-      <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개사</td>
-      ${months.map(m=>`<td class="num" style="color:#fff;font-size:11.5px;">${mTot[m]?fmt(mTot[m]):'—'}</td>`).join('')}
-      <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
-      <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
-      <td class="num" style="color:rgba(255,255,255,.6);"></td>
+    const clRows=Object.entries(clMap).sort((a,b)=>b[1].cost-a[1].cost);
+    const safeKey=key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html+=`<tr style="cursor:pointer;" onclick="togglePartnerDetail('${safeKey}')">
+      <td><span style="font-size:11px;color:var(--teal);margin-right:4px;">${open?'▼':'▶'}</span><span class="bold">${r.name}</span></td>
+      <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
+      ${span.map(s=>{const k=colKey(s);return `<td class="num" style="font-size:11.5px;">${r.ms[k]?fmt(r.ms[k]):'—'}</td>`;}).join('')}
+      <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>
+      <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
+      <td class="num" style="color:var(--gray400);font-size:11px;">${r.clients.size}개</td>
     </tr>`;
-    rows.forEach(r=>{
-      const key=r.name+'|'+r.branch;
-      const open=!!partnerExpanded[key];
-      // 고객 드릴다운 데이터
-      const clMap={};
-      data.filter(d=>(d['협력사명']||'미확인')===r.name&&(d['지사']||'')===r.branch).forEach(d=>{
-        const cl=d['고객(화주)']||'미확인';
-        if(!clMap[cl]) clMap[cl]={rev:0,cost:0,ci:0,cnt:0,ms:{}};
-        const m=+d['월']||1;
-        clMap[cl].ms[m]=(clMap[cl].ms[m]||0)+(+d['하불(원)']||0);
-        clMap[cl].rev +=(+d['매출(원)']||0);
-        clMap[cl].cost+=(+d['하불(원)']||0);
-        clMap[cl].ci  +=(+d['공헌이익(원)']||0);
-        clMap[cl].cnt++;
-      });
-      const clRows=Object.entries(clMap).sort((a,b)=>b[1].cost-a[1].cost);
-      const safeKey=key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      html+=`<tr style="cursor:pointer;" onclick="togglePartnerDetail('${safeKey}')">
-        <td><span style="font-size:11px;color:var(--teal);margin-right:4px;">${open?'▼':'▶'}</span><span class="bold">${r.name}</span></td>
-        <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
-        ${months.map(m=>`<td class="num" style="font-size:11.5px;">${r.ms[m]?fmt(r.ms[m]):'—'}</td>`).join('')}
-        <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>
-        <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
-        <td class="num" style="color:var(--gray400);font-size:11px;">${r.clients.size}개</td>
-      </tr>`;
-      if(open){
-        html+=`<tr><td colspan="${totalCols+1}" style="padding:0;background:var(--gray50);">
-          <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-            <thead><tr style="background:var(--navy2);">
-              <th style="padding:7px 12px 7px 32px;color:rgba(255,255,255,.7);text-align:left;">고객(화주)</th>
-              ${months.map(m=>`<th style="padding:7px 8px;color:rgba(255,255,255,.7);text-align:right;">${m}월</th>`).join('')}
-              <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">누계</th>
-              <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">이익률</th>
-              <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">건수</th>
-            </tr></thead>
-            <tbody>${clRows.map(([name,d])=>`<tr style="border-bottom:1px solid var(--gray100);">
-              <td style="padding:6px 12px 6px 32px;color:var(--navy);font-weight:600;">↳ ${name}</td>
-              ${months.map(m=>`<td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-size:11.5px;">${d.ms[m]?fmt(d.ms[m]):'—'}</td>`).join('')}
-              <td style="padding:6px 12px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmt(d.cost)}</td>
-              <td style="padding:6px 12px;text-align:right;"><span class="badge b-green">${pct(d.ci,d.rev)}</span></td>
-              <td style="padding:6px 12px;text-align:right;color:var(--gray500);">${d.cnt}건</td>
-            </tr>`).join('')}</tbody>
-          </table>
-        </td></tr>`;
-      }
-    });
-    tb.innerHTML=html;
-  }
+    if(open){
+      html+=`<tr><td colspan="${totalCols+1}" style="padding:0;background:var(--gray50);">
+        <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+          <thead><tr style="background:var(--navy2);">
+            <th style="padding:7px 12px 7px 32px;color:rgba(255,255,255,.7);text-align:left;">고객(화주)</th>
+            ${span.map(s=>`<th style="padding:7px 8px;color:rgba(255,255,255,.7);text-align:right;">${colLbl(s)}</th>`).join('')}
+            <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">누계</th>
+            <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">이익률</th>
+            <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">건수</th>
+          </tr></thead>
+          <tbody>${clRows.map(([name,d])=>`<tr style="border-bottom:1px solid var(--gray100);">
+            <td style="padding:6px 12px 6px 32px;color:var(--navy);font-weight:600;">↳ ${name}</td>
+            ${span.map(s=>{const k=colKey(s);return `<td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-size:11.5px;">${d.ms[k]?fmt(d.ms[k]):'—'}</td>`;}).join('')}
+            <td style="padding:6px 12px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmt(d.cost)}</td>
+            <td style="padding:6px 12px;text-align:right;"><span class="badge b-green">${pct(d.ci,d.rev)}</span></td>
+            <td style="padding:6px 12px;text-align:right;color:var(--gray500);">${d.cnt}건</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </td></tr>`;
+    }
+  });
+  tb.innerHTML=html;
 }
 
 function togglePartnerDetail(key){
@@ -2179,29 +2234,31 @@ function togglePartnerDetail(key){
 // ══════════════════════════════════════════════════════
 function renderClient() {
   const branch  = document.getElementById('cBranch').value;
-  const year    = document.getElementById('cYear').value;
-  const mFrom   = +document.getElementById('cMonthFrom').value || 1;
-  const mTo     = +document.getElementById('cMonthTo').value   || 12;
+  const y1=document.getElementById('cY1').value, m1=document.getElementById('cM1').value;
+  const y2=document.getElementById('cY2').value, m2=document.getElementById('cM2').value;
   const q       = document.getElementById('cSrch').value.trim().toLowerCase();
   const head    = document.getElementById('clientHead');
   const tb      = document.getElementById('clientBody');
+  if(!y1||!y2) return;
+  const {lo,hi}=periodBounds(y1,m1,y2,m2);
 
   let data = allData.filter(r=>{
-    if(year   && String(r['연도'])!==String(year)) return false;
-    if(branch && r['지사']!==branch)               return false;
-    const m=+r['월']||0;
-    if(m<mFrom||m>mTo)                             return false;
+    if(!inPeriod(r,lo,hi))           return false;
+    if(branch && r['지사']!==branch) return false;
     if(q && !(r['고객(화주)']||'').toLowerCase().includes(q) && !(r['협력사명']||'').toLowerCase().includes(q)) return false;
     return true;
   });
 
-  const months=[];
-  for(let m=mFrom;m<=mTo;m++) months.push(m);
-  const totalCols = 3 + months.length + 2;
+  const span = monthSpan(lo,hi);
+  const multiYear = span.length>0 && span[0].y!==span[span.length-1].y;
+  const colKey = s => `${s.y}-${s.m}`;
+  const rowKey = r => `${+r['연도']}-${+r['월']}`;
+  const colLbl = s => multiYear ? `${String(s.y).slice(2)}.${s.m}` : `${s.m}월`;
+  const totalCols = 3 + span.length + 2;
 
   head.innerHTML=`<tr>
     <th>고객(화주)</th><th>협력사명</th><th>지사</th>
-    ${months.map(m=>`<th style="text-align:right">${m}월</th>`).join('')}
+    ${span.map(s=>`<th style="text-align:right">${colLbl(s)}</th>`).join('')}
     <th style="text-align:right">누계(하불)</th>
     <th style="text-align:right">이익률</th>
     <th style="text-align:right">건수</th>
@@ -2211,24 +2268,25 @@ function renderClient() {
   data.forEach(r=>{
     const key=(r['고객(화주)']||'미확인')+'|'+(r['협력사명']||'')+'|'+(r['지사']||'');
     if(!cMap[key]) cMap[key]={client:r['고객(화주)']||'미확인',partner:r['협력사명']||'',branch:r['지사']||'',ms:{},rev:0,cost:0,ci:0,cnt:0};
-    const m=+r['월']||1;
-    cMap[key].ms[m]=(cMap[key].ms[m]||0)+(+r['하불(원)']||0);
+    const mk=rowKey(r);
+    cMap[key].ms[mk]=(cMap[key].ms[mk]||0)+(+r['하불(원)']||0);
     cMap[key].rev +=(+r['매출(원)']||0);
     cMap[key].cost+=(+r['하불(원)']||0);
     cMap[key].ci  +=(+r['공헌이익(원)']||0);
     cMap[key].cnt++;
   });
   const rows=Object.values(cMap).sort((a,b)=>b.cost-a.cost);
-  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;return;}
-  document.getElementById('clientSub').textContent=`고객별 · ${rows.length}개 고객 · ${mFrom}월~${mTo}월`;
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
+    document.getElementById('clientSub').textContent=`고객별 · 0개 고객 · ${periodLabel(+y1,+m1,+y2,+m2)}`;return;}
+  document.getElementById('clientSub').textContent=`고객별 · ${rows.length}개 고객 · ${periodLabel(+y1,+m1,+y2,+m2)}`;
   // 합계 행
-  const mTot={}; months.forEach(m=>mTot[m]=rows.reduce((s,r)=>s+(r.ms[m]||0),0));
+  const mTot={}; span.forEach(s=>{const k=colKey(s);mTot[k]=rows.reduce((sm,r)=>sm+(r.ms[k]||0),0);});
   const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0), tCnt=rows.reduce((s,r)=>s+r.cnt,0);
   const totalRow=`<tr style="background:var(--navy);font-weight:800;">
     <td style="color:#fff;">합계</td>
     <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개</td>
     <td></td>
-    ${months.map(m=>`<td class="num" style="color:#fff;font-size:11.5px;">${mTot[m]?fmt(mTot[m]):'—'}</td>`).join('')}
+    ${span.map(s=>{const k=colKey(s);return `<td class="num" style="color:#fff;font-size:11.5px;">${mTot[k]?fmt(mTot[k]):'—'}</td>`;}).join('')}
     <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
     <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
     <td class="num" style="color:rgba(255,255,255,.6);">${tCnt}건</td>
@@ -2237,7 +2295,7 @@ function renderClient() {
     <td class="bold">${r.client}</td>
     <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.partner||'—'}</td>
     <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
-    ${months.map(m=>`<td class="num" style="font-size:11.5px;">${r.ms[m]?fmt(r.ms[m]):'—'}</td>`).join('')}
+    ${span.map(s=>{const k=colKey(s);return `<td class="num" style="font-size:11.5px;">${r.ms[k]?fmt(r.ms[k]):'—'}</td>`;}).join('')}
     <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>
     <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
     <td class="num" style="color:var(--gray500);">${r.cnt}건</td>
@@ -3037,6 +3095,7 @@ function log(msg,type=''){
 // INIT
 // ══════════════════════════════════════════════════════
 upBadge();
+populateYearSelects();
 renderDash();
 loadUploaderId();
 
