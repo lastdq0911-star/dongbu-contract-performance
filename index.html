@@ -64,11 +64,18 @@ body {
   display: flex; align-items: center; gap: 10px;
 }
 .logo-icon {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--teal), var(--teal-d));
+  width: 44px; height: 34px; border-radius: 9px;
+  background: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0,184,169,.4);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  overflow: hidden;
+  padding: 3px 5px;
+}
+.logo-icon .sebang-ci {
+  font-size: 13px; font-weight: 900; color: #003087;
+  letter-spacing: -0.5px; line-height: 1;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 .header-logo h1 {
   color: #fff; font-size: 15px; font-weight: 800;
@@ -76,6 +83,7 @@ body {
 }
 .header-logo p {
   color: rgba(255,255,255,.45); font-size: 10.5px; font-weight: 400;
+  text-align: center;
 }
 .header-right { display: flex; align-items: center; gap: 8px; }
 .save-btn {
@@ -530,7 +538,10 @@ td.bold { font-weight: 700; color: var(--navy); }
 .chart-wrap { padding: 0 4px; }
 .chart-cols { display: flex; align-items: flex-end; gap: 5px; height: 120px; }
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.bar-col.active-month .bar-lbl { color: var(--teal); font-weight: 700; }
+.bar-col.active-month .bar-stack { background: rgba(0,184,169,.05); border-radius: 4px; }
 .bar-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 1px; width: 100%; justify-content: flex-start; height: 110px; }
+.bar-nums { font-size: 8px; color: var(--gray400); text-align: center; line-height: 1.5; white-space: nowrap; }
 .bar-seg {
   width: 100%; border-radius: 3px 3px 0 0; min-height: 2px;
   transition: height .7s cubic-bezier(.34,1.56,.64,1);
@@ -671,10 +682,12 @@ td.bold { font-weight: 700; color: var(--navy); }
 <!-- ══ HEADER ══════════════════════════════════════════ -->
 <header class="app-header">
   <div class="header-logo">
-    <div class="logo-icon">📦</div>
+    <div class="logo-icon">
+      <span class="sebang-ci">세방</span>
+    </div>
     <div>
       <h1>하불실적관리</h1>
-      <p>동부계약관리팀 · EBPM</p>
+      <p>동부계약관리팀</p>
     </div>
   </div>
   <div class="header-right">
@@ -728,9 +741,16 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">대시보드</div>
         <div class="page-sub" id="dashSub">데이터를 업로드하면 현황이 표시됩니다</div>
       </div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <select class="fsel" id="dashYear" onchange="renderDash()">
           <option>2026</option><option>2025</option><option>2024</option>
+        </select>
+        <select class="fsel" id="dashMonth" onchange="renderDash()">
+          <option value="">전체 월</option>
+          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+          <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
         </select>
         <select class="fsel" id="dashBranch" onchange="renderDash()">
           <option value="">전체</option>
@@ -771,7 +791,7 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="card-inner">
         <div class="section-label">
           <div style="font-size:14px;">📊</div>
-          <h3>월별 하불 추이</h3>
+          <h3>월별 실적 추이</h3>
         </div>
         <div class="chart-wrap">
           <div class="chart-cols" id="monthChart">
@@ -1547,10 +1567,12 @@ function _deleteBatch(batchId) {
 function renderDash() {
   const year=document.getElementById('dashYear').value;
   const branch=document.getElementById('dashBranch').value;
-  const data=fd(allData,{year,branch});
+  const month=document.getElementById('dashMonth').value;
+  const data=fd(allData,{year,branch,month});
 
+  const monthLabel = month ? month+'월 · ' : '';
   document.getElementById('dashSub').textContent =
-    `${year}년 ${branch||'전체 지사'} · ${data.length}건`;
+    `${year}년 ${monthLabel}${branch||'전체 지사'} · ${data.length}건`;
 
   const rev  = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
   const cost = data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
@@ -1566,7 +1588,9 @@ function renderDash() {
   document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
   document.getElementById('kCntS').textContent  = '전체 '+data.length+'건';
 
-  renderMonthChart(data);
+  // 차트는 선택 월 무관 연도+지사 전체 12개월 표시 (선택 월 강조)
+  const chartData = month ? fd(allData,{year,branch}) : data;
+  renderMonthChart(chartData);
   renderBranchKpi(data);
   renderTopPartners(data);
   renderCatChart(data);
@@ -1578,6 +1602,7 @@ function renderMonthChart(data) {
     el.innerHTML='<div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>';
     return;
   }
+  const selMonth = document.getElementById('dashMonth').value;
   const byM = Array.from({length:12},(_,i)=>{
     const rows=data.filter(r=>+r['월']===i+1);
     return {
@@ -1589,15 +1614,25 @@ function renderMonthChart(data) {
   const maxV = Math.max(...byM.map(b=>Math.max(b.rev,b.cost,b.ci)),1);
   const h = v => Math.max(Math.round((v/maxV)*100),v>0?2:0);
 
-  el.innerHTML = byM.map((d,i)=>`
-    <div class="bar-col">
+  el.innerHTML = byM.map((d,i)=>{
+    const isActive = selMonth === String(i+1);
+    const hasData = d.rev > 0 || d.cost > 0;
+    const nums = hasData ? `<div class="bar-nums">
+      <span style="color:var(--teal);">${fmtB(d.rev)}</span><br>
+      <span style="color:var(--gold);">${fmtB(d.cost)}</span><br>
+      <span style="color:var(--green);">${fmtB(d.ci)}</span>
+    </div>` : '';
+    return `
+    <div class="bar-col${isActive?' active-month':''}">
+      ${nums}
       <div class="bar-stack">
         <div class="bar-seg" style="height:${h(d.rev)}px;background:var(--teal);opacity:.35;" data-tip="${i+1}월 매출: ${fmtB(d.rev)}"></div>
         <div class="bar-seg" style="height:${h(d.cost)}px;background:var(--gold);" data-tip="${i+1}월 하불: ${fmtB(d.cost)}"></div>
         <div class="bar-seg" style="height:${h(d.ci)}px;background:var(--green);" data-tip="${i+1}월 공헌이익: ${fmtB(d.ci)}"></div>
       </div>
       <div class="bar-lbl">${i+1}월</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderBranchKpi(data) {
