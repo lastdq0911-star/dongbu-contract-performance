@@ -554,9 +554,10 @@ td.bold { font-weight: 700; color: var(--navy); }
 .bar-col.no-data .bar-area { border-bottom: 1px dashed var(--gray200); }
 /* 막대 위 숫자 레이블 */
 .bar-num {
-  font-size: 7px; font-weight: 700; color: var(--teal);
-  white-space: nowrap; line-height: 1.2; text-align: center;
-  flex-shrink: 0; height: 16px; display: flex; align-items: flex-end; overflow: hidden;
+  font-size: 9.5px; font-weight: 800; color: var(--navy);
+  white-space: nowrap; line-height: 1.1; text-align: center;
+  flex-shrink: 0; height: 15px; display: flex; align-items: flex-end;
+  justify-content: center; overflow: visible;
 }
 /* bar-area: 세로 공간 전부 차지, flex-grow로 비율 분배 */
 .bar-area {
@@ -591,10 +592,10 @@ td.bold { font-weight: 700; color: var(--navy); }
 .leg-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
 /* ══ PARTNER LIST ════════════════════════════════════ */
-.rank-list { display: flex; flex-direction: column; }
+.rank-list { display: flex; flex-direction: column; flex-shrink: 0; }
 .rank-row  {
   display: flex; align-items: center; gap: 10px;
-  padding: 6px 0; border-bottom: 1px solid var(--gray100);
+  padding: 4px 0; border-bottom: 1px solid var(--gray100);
 }
 .rank-row:last-child { border-bottom: none; }
 .rank-no { font-size: 11px; font-weight: 800; color: var(--gray300); min-width: 18px; text-align: center; }
@@ -663,9 +664,12 @@ td.bold { font-weight: 700; color: var(--navy); }
 /* 차트 막대가 과하게 커지지 않도록 최대 높이 제한 + 세로 중앙 배치 */
 .dash-chart-card .chart-wrap { max-height: 420px; margin: auto 0; }
 /* 우측 패널: 내용이 많으면 패널 안에서만 스크롤 (페이지 전체는 고정) */
-.dash-right { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; }
-.dash-right .card-inner { padding: 10px 12px; }
+.dash-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
+.dash-right .card-inner { padding: 9px 12px; }
 .dash-right .section-label { margin-bottom: 6px; }
+/* 지사별·협력사 카드는 자연 높이 유지(TOP5 잘림 방지), 용역구분 차트가 남는 공간 차지 */
+.dash-right > .card:nth-child(1), .dash-right > .card:nth-child(2) { flex-shrink: 0; }
+.dash-right > .card:nth-child(3) { flex: 1; min-height: 0; }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -1839,7 +1843,19 @@ function renderTable() {
   if(!data.length){tb.innerHTML='<tr><td colspan="16" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';return;}
   const limit = tableShowAll ? data.length : 200;
   const shown = data.slice(0, limit);
-  tb.innerHTML = shown.map((r,i)=>`<tr>
+  // 합계 행 (필터된 전체 기준)
+  const tRev = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
+  const tCost= data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
+  const tCI  = data.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0);
+  const totalRow = `<tr style="background:var(--teal-ll);font-weight:800;">
+    <td colspan="9" style="text-align:right;padding:9px 10px;color:var(--navy);">합계 (${data.length}건)</td>
+    <td class="num" style="color:var(--navy);">${fmt(tRev)}</td>
+    <td class="num" style="color:var(--navy);">${fmt(tCost)}</td>
+    <td class="num" style="color:var(--green);">${fmt(tCI)}</td>
+    <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
+    <td colspan="3"></td>
+  </tr>`;
+  tb.innerHTML = totalRow + shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
     <td class="mono">${r['연도']||''}/${r['월']||''}</td>
     <td class="bold" style="overflow:hidden;text-overflow:ellipsis;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
@@ -1919,7 +1935,17 @@ function renderPartner() {
     const rows=Object.values(pMap).sort((a,b)=>b.cost-a.cost);
     if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;return;}
     document.getElementById('partnerSub').textContent=`협력사별 · ${rows.length}개사 · ${mFrom}월~${mTo}월`;
-    let html='';
+    // 합계 행
+    const mTot={}; months.forEach(m=>mTot[m]=rows.reduce((s,r)=>s+(r.ms[m]||0),0));
+    const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0);
+    let html=`<tr style="background:var(--navy);font-weight:800;">
+      <td style="color:#fff;">합계</td>
+      <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개사</td>
+      ${months.map(m=>`<td class="num" style="color:#fff;font-size:11.5px;">${mTot[m]?fmt(mTot[m]):'—'}</td>`).join('')}
+      <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
+      <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
+      <td class="num" style="color:rgba(255,255,255,.6);"></td>
+    </tr>`;
     rows.forEach(r=>{
       const key=r.name+'|'+r.branch;
       const open=!!partnerExpanded[key];
@@ -2022,7 +2048,19 @@ function renderClient() {
   const rows=Object.values(cMap).sort((a,b)=>b.cost-a.cost);
   if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;return;}
   document.getElementById('clientSub').textContent=`고객별 · ${rows.length}개 고객 · ${mFrom}월~${mTo}월`;
-  tb.innerHTML=rows.map(r=>`<tr>
+  // 합계 행
+  const mTot={}; months.forEach(m=>mTot[m]=rows.reduce((s,r)=>s+(r.ms[m]||0),0));
+  const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0), tCnt=rows.reduce((s,r)=>s+r.cnt,0);
+  const totalRow=`<tr style="background:var(--navy);font-weight:800;">
+    <td style="color:#fff;">합계</td>
+    <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개</td>
+    <td></td>
+    ${months.map(m=>`<td class="num" style="color:#fff;font-size:11.5px;">${mTot[m]?fmt(mTot[m]):'—'}</td>`).join('')}
+    <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
+    <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
+    <td class="num" style="color:rgba(255,255,255,.6);">${tCnt}건</td>
+  </tr>`;
+  tb.innerHTML=totalRow+rows.map(r=>`<tr>
     <td class="bold">${r.client}</td>
     <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.partner||'—'}</td>
     <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
@@ -2184,11 +2222,15 @@ function confirmData(){
     toast('⛔ 이미 반영된 중복 데이터입니다 — 반영할 수 없습니다');
     return;
   }
-  if(dupResult.verdict==='heavy'){
-    if(!confirm(`⚠ 과반(${dupResult.dupIdx.length}건)이 중복입니다.\n그대로 반영하면 대부분 이중 등록됩니다.\n\n[확인] 중복 포함 그대로 반영\n[취소] 중단 (중복 제외하려면 '중복 행 제외' 버튼 사용)`)) return;
-  }
   if(dupResult.verdict==='partial'){
-    if(!confirm(`중복 ${dupResult.dupIdx.length}건이 포함되어 있습니다.\n그대로 반영하면 일부 이중 등록됩니다.\n\n[확인] 중복 포함 그대로 반영\n[취소] 중단 (중복 제외하려면 '중복 행 제외' 버튼 사용)`)) return;
+    const ok = confirm(
+      `⚠ 중복 의심 ${dupResult.dupIdx.length}건이 포함되어 있습니다.\n`+
+      `기존 데이터와 상세내역이 일치하는 행이 있습니다.\n`+
+      `중복인지 한번 더 확인해 주세요.\n\n`+
+      `[확인] 그대로 업로드(반영)\n`+
+      `[취소] 다시 확인 (중복만 빼려면 '중복 행 제외' 버튼)`
+    );
+    if(!ok) return;
   }
   requireUploader(_doConfirmData);
 }
@@ -2335,16 +2377,14 @@ function runDupVerification(rows){
   const dup = dupIdx.length;
   const ratio = total ? dup/total : 0;
 
-  // 판정 기준
-  // - 0건         : 이상 없음 (clean)
-  // - 1건~49%     : 일부 중복 경고 (partial) — 신규 행 섞임, 제외 후 반영 가능
-  // - 50%~94%     : 과반 중복 강경 경고 (heavy) — 강하게 경고하되 제외 선택 가능
-  // - 95% 이상    : 사실상 전부 중복 (full) — 반영 차단
+  // 판정 기준 (3단계)
+  // - 0건       : 이상 없음 (clean) → 바로 반영
+  // - 1건~89%   : 일부 중복 (partial) → 경고 후 사용자 선택
+  // - 90% 이상  : 사실상 전부 중복 (full) → 반영 차단
   let verdict;
-  if (dup===0)           verdict = 'clean';
-  else if (ratio >= 0.95) verdict = 'full';
-  else if (ratio >= 0.50) verdict = 'heavy';
-  else                   verdict = 'partial';
+  if (dup===0)            verdict = 'clean';
+  else if (ratio >= 0.90) verdict = 'full';
+  else                    verdict = 'partial';
 
   dupResult = { dupIdx, verdict };
 
@@ -2359,15 +2399,11 @@ function runDupVerification(rows){
   } else if (verdict==='full') {
     dupWarn.classList.add('show','block');
     removeBtn.style.display='none';
-    msg.innerHTML = `⛔ <strong>중복 데이터</strong> — ${total}건 전부(${pct(dup,total)}) 기존 데이터와 상세내역이 일치합니다.<br>이미 반영된 파일로 판단되어 반영이 차단됩니다. 재반영 시 관리자가 기존 배치를 삭제하세요.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
-  } else if (verdict==='heavy') {
-    dupWarn.classList.add('show','block');
-    removeBtn.style.display='';
-    msg.innerHTML = `🔶 <strong>과반 중복</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 일치합니다.<br>신규 ${total-dup}건만 반영하려면 아래 '중복 행 제외' 후 반영하세요.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
+    msg.innerHTML = `⛔ <strong>중복 데이터</strong> — ${total}건 중 ${dup}건(${pct(dup,total)})이 기존 데이터와 상세내역이 일치합니다.<br>이미 반영된 파일로 판단되어 반영이 차단됩니다. 재반영 시 관리자가 기존 배치를 삭제하세요.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
   } else {
     dupWarn.classList.add('show');
     removeBtn.style.display='';
-    msg.innerHTML = `⚠ <strong>일부 중복</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 상세내역이 일치합니다. 중복 ${dup}건을 제외하고 신규 ${total-dup}건만 반영할 수 있습니다.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
+    msg.innerHTML = `⚠ <strong>일부 중복 의심</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 상세내역이 일치합니다.<br>중복 여부를 한번 더 확인해 주세요. 반영 시 그대로 올릴지 / 취소 후 다시 확인할지 선택할 수 있습니다.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
   }
 }
 
