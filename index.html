@@ -2184,8 +2184,11 @@ function confirmData(){
     toast('⛔ 이미 반영된 중복 데이터입니다 — 반영할 수 없습니다');
     return;
   }
+  if(dupResult.verdict==='heavy'){
+    if(!confirm(`⚠ 과반(${dupResult.dupIdx.length}건)이 중복입니다.\n그대로 반영하면 대부분 이중 등록됩니다.\n\n[확인] 중복 포함 그대로 반영\n[취소] 중단 (중복 제외하려면 '중복 행 제외' 버튼 사용)`)) return;
+  }
   if(dupResult.verdict==='partial'){
-    if(!confirm(`중복 ${dupResult.dupIdx.length}건이 포함되어 있습니다.\n그대로 반영하면 데이터가 이중 등록됩니다.\n\n[확인] 중복 포함 그대로 반영\n[취소] 중단 (중복 제외하려면 '중복 행 제외' 버튼 사용)`)) return;
+    if(!confirm(`중복 ${dupResult.dupIdx.length}건이 포함되어 있습니다.\n그대로 반영하면 일부 이중 등록됩니다.\n\n[확인] 중복 포함 그대로 반영\n[취소] 중단 (중복 제외하려면 '중복 행 제외' 버튼 사용)`)) return;
   }
   requireUploader(_doConfirmData);
 }
@@ -2269,17 +2272,38 @@ function deleteDupBatch() {
 // ══════════════════════════════════════════════════════
 // AI 중복 검증 (상세내역 기반)
 // ══════════════════════════════════════════════════════
-// 행의 핵심 식별 필드로 지문(fingerprint) 생성
+// 용역 유형마다 "같은 거래"를 구별하는 핵심 필드가 다름
+// - 컨테이너운송: 협력사·화주·출발·도착·톤급·물량·청구요율·매출·하불
+// - 벌크운송:    협력사·화주·출발·도착·중량·청구요율·매출·하불
+// - 도급:        협력사·화주·계약유형·물량·매출·하불
+// - 장비임대:    협력사·화주·톤급·계약유형·매출·하불
+// - 하역/보관/기타: 협력사·화주·매출·하불 (라우트 없음)
 function rowFingerprint(r){
   const t = v => String(v??'').trim().replace(/\s+/g,'').toLowerCase();
   const n = v => Math.round(+String(v??'').replace(/[^\d.-]/g,'')||0);
-  return [
-    t(r['지사']), r['연도'], r['월'],
-    t(r['협력사명']), t(r['고객(화주)']),
-    t(r['출발지']), t(r['도착지']),
-    t(r['톤급']), t(r['중량']),
-    n(r['매출(원)']), n(r['하불(원)'])
-  ].join('|');
+  const base = [t(r['지사']), r['연도'], r['월'], t(r['용역구분']), t(r['협력사명']), t(r['고객(화주)'])];
+  const rev  = n(r['매출(원)']);
+  const cost = n(r['하불(원)']);
+  const cat  = t(r['용역구분']);
+
+  let specific;
+  if (cat === '컨테이너운송') {
+    // 구간·컨사이즈·물량·요율이 같아야 동일 건
+    specific = [t(r['출발지']), t(r['도착지']), t(r['톤급']), t(r['물량(건/톤)']), t(r['청구요율구분']), rev, cost];
+  } else if (cat === '벌크운송') {
+    // 구간·중량·요율이 같아야 동일 건
+    specific = [t(r['출발지']), t(r['도착지']), t(r['중량']), t(r['청구요율구분']), rev, cost];
+  } else if (cat === '도급') {
+    // 계약유형·물량·금액 기준 (현장 계약 특성상 구간 없음)
+    specific = [t(r['계약유형']), t(r['물량(건/톤)']), rev, cost];
+  } else if (cat === '장비임대') {
+    // 장비 톤급·계약유형·금액 기준
+    specific = [t(r['톤급']), t(r['계약유형']), rev, cost];
+  } else {
+    // 하역·보관·기타 — 협력사·화주·금액으로 판별
+    specific = [rev, cost];
+  }
+  return [...base, ...specific].join('|');
 }
 
 function runDupVerification(rows){
@@ -2288,7 +2312,7 @@ function runDupVerification(rows){
   const removeBtn = document.getElementById('dupRemoveBtn');
   dupWarn.classList.remove('block','clean');
 
-  // 기존 전체 데이터 지문 집합 (현재 반영 대기 행 제외)
+  // 기존 전체 데이터 지문 집합
   const existing = new Set(allData.map(rowFingerprint));
   // 동일 지사/연도/월의 기존 배치 (삭제 버튼용)
   const y = +document.getElementById('yearIn').value;
@@ -2296,22 +2320,37 @@ function runDupVerification(rows){
   const sameBatch = batches.find(b=>b.branch===selBranch && b.year===y && b.month===m);
   dupWarn.dataset.dupId = sameBatch ? sameBatch.id : '';
 
-  // 상세내역 대조
+  // 상세내역 대조 — 용역유형별로 각자 지문 비교
   const dupIdx = [];
   rows.forEach((r,i)=>{ if(existing.has(rowFingerprint(r))) dupIdx.push(i); });
+
+  // 용역 유형별 중복 분포 집계 (로그용)
+  const catDup = {};
+  dupIdx.forEach(i=>{
+    const c = rows[i]['용역구분']||'기타';
+    catDup[c] = (catDup[c]||0)+1;
+  });
 
   const total = rows.length;
   const dup = dupIdx.length;
   const ratio = total ? dup/total : 0;
 
+  // 판정 기준
+  // - 0건         : 이상 없음 (clean)
+  // - 1건~49%     : 일부 중복 경고 (partial) — 신규 행 섞임, 제외 후 반영 가능
+  // - 50%~94%     : 과반 중복 강경 경고 (heavy) — 강하게 경고하되 제외 선택 가능
+  // - 95% 이상    : 사실상 전부 중복 (full) — 반영 차단
   let verdict;
-  if (dup===0)            verdict = 'clean';
-  else if (ratio >= 0.95) verdict = 'full';   // 거의 전부 중복 → 차단
-  else                    verdict = 'partial'; // 일부 중복 → 경고
+  if (dup===0)           verdict = 'clean';
+  else if (ratio >= 0.95) verdict = 'full';
+  else if (ratio >= 0.50) verdict = 'heavy';
+  else                   verdict = 'partial';
 
   dupResult = { dupIdx, verdict };
 
-  log(`AI 검증 결과: 전체 ${total}건 중 ${dup}건이 기존 데이터와 상세내역 일치`, dup?'warn':'ok');
+  // 용역별 분포 로그
+  const catSummary = Object.entries(catDup).map(([c,n])=>`${c} ${n}건`).join(' / ');
+  log(`AI 검증 결과: 전체 ${total}건 중 ${dup}건 중복${catSummary?` (${catSummary})`:''} — 판정: ${verdict}`, dup?'warn':'ok');
 
   if (verdict==='clean') {
     dupWarn.classList.add('show','clean');
@@ -2320,11 +2359,15 @@ function runDupVerification(rows){
   } else if (verdict==='full') {
     dupWarn.classList.add('show','block');
     removeBtn.style.display='none';
-    msg.innerHTML = `⛔ <strong>중복 데이터</strong> — ${total}건 전부(${pct(dup,total)}) 기존 데이터와 상세내역이 일치합니다. 이미 반영된 데이터로 판단되어 반영이 차단됩니다. 재반영하려면 관리자가 기존 배치를 삭제하세요.`;
+    msg.innerHTML = `⛔ <strong>중복 데이터</strong> — ${total}건 전부(${pct(dup,total)}) 기존 데이터와 상세내역이 일치합니다.<br>이미 반영된 파일로 판단되어 반영이 차단됩니다. 재반영 시 관리자가 기존 배치를 삭제하세요.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
+  } else if (verdict==='heavy') {
+    dupWarn.classList.add('show','block');
+    removeBtn.style.display='';
+    msg.innerHTML = `🔶 <strong>과반 중복</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 일치합니다.<br>신규 ${total-dup}건만 반영하려면 아래 '중복 행 제외' 후 반영하세요.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
   } else {
     dupWarn.classList.add('show');
     removeBtn.style.display='';
-    msg.innerHTML = `⚠ <strong>일부 중복</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 상세내역이 일치합니다. 중복 ${dup}건을 제외하고 신규 ${total-dup}건만 반영할 수 있습니다.`;
+    msg.innerHTML = `⚠ <strong>일부 중복</strong> — ${total}건 중 <strong>${dup}건(${pct(dup,total)})</strong>이 기존 데이터와 상세내역이 일치합니다. 중복 ${dup}건을 제외하고 신규 ${total-dup}건만 반영할 수 있습니다.${catSummary?`<br><small>중복 용역: ${catSummary}</small>`:''}`;
   }
 }
 
