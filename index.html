@@ -438,14 +438,16 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 /* ══ COLUMN FILTER ════════════════════════════════════ */
 .th-inner { display: flex; align-items: center; gap: 3px; }
-.col-filter-btn {
+.col-filter-btn, .col-sort-btn {
   border: none; background: rgba(255,255,255,.15); color: rgba(255,255,255,.7);
   font-size: 9px; padding: 1px 4px; border-radius: 3px; cursor: pointer;
   line-height: 1.4; flex-shrink: 0; transition: background .12s;
   font-family: inherit;
 }
-.col-filter-btn:hover { background: rgba(255,255,255,.3); color: #fff; }
+.col-filter-btn:hover, .col-sort-btn:hover { background: rgba(255,255,255,.3); color: #fff; }
 .col-filter-btn.active { background: var(--teal); color: #fff; }
+.col-sort-btn.asc  { background: var(--gold); color: #fff; }
+.col-sort-btn.desc { background: #f97316; color: #fff; }
 .col-filter-popup {
   position: absolute; z-index: 9000;
   background: var(--white); border: 1.5px solid var(--gray200);
@@ -1025,45 +1027,43 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="tbl-wrap">
         <table id="mainTable" style="table-layout:fixed;">
           <colgroup>
-            <col style="width:52px">
-            <col style="width:50px">
-            <col style="width:112px">
-            <col style="width:100px">
-            <col style="width:72px">
-            <col style="width:65px">
-            <col style="width:65px">
-            <col style="width:42px">
-            <col style="width:50px">
-            <col style="width:105px">
-            <col style="width:105px">
-            <col style="width:105px">
-            <col style="width:58px">
-            <col style="width:50px">
-            <col style="width:78px">
-            <col style="width:30px">
+            <col style="width:52px">   <!-- 지사 -->
+            <col style="width:50px">   <!-- 연/월 -->
+            <col style="width:115px">  <!-- 협력사명 -->
+            <col style="width:105px">  <!-- 고객(화주) -->
+            <col style="width:74px">   <!-- 용역 -->
+            <col style="width:80px">   <!-- 출발지 -->
+            <col style="width:80px">   <!-- 도착지 -->
+            <col style="width:55px">   <!-- 톤급 -->
+            <col style="width:55px">   <!-- 중량 -->
+            <col style="width:105px">  <!-- 매출(원) -->
+            <col style="width:105px">  <!-- 하불(원) -->
+            <col style="width:105px">  <!-- 공헌이익 -->
+            <col style="width:60px">   <!-- 이익률 -->
+            <col style="width:90px">   <!-- S/O명 -->
+            <col style="width:32px">   <!-- 관리 -->
           </colgroup>
           <thead id="tblHead">
             <tr>
               <th><div class="th-inner">지사<button class="col-filter-btn" onclick="openColFilter(event,'지사')">▾</button></div></th>
-              <th><div class="th-inner">연/월</div></th>
-              <th><div class="th-inner">협력사명<button class="col-filter-btn" onclick="openColFilter(event,'협력사명')">▾</button></div></th>
-              <th><div class="th-inner">고객(화주)<button class="col-filter-btn" onclick="openColFilter(event,'고객(화주)')">▾</button></div></th>
+              <th><div class="th-inner">연/월<button class="col-sort-btn" onclick="setSort('연월',this)">↕</button></div></th>
+              <th><div class="th-inner">협력사명<button class="col-filter-btn" onclick="openColFilter(event,'협력사명')">▾</button><button class="col-sort-btn" onclick="setSort('협력사명',this)">↕</button></div></th>
+              <th><div class="th-inner">고객(화주)<button class="col-filter-btn" onclick="openColFilter(event,'고객(화주)')">▾</button><button class="col-sort-btn" onclick="setSort('고객(화주)',this)">↕</button></div></th>
               <th><div class="th-inner">용역<button class="col-filter-btn" onclick="openColFilter(event,'용역구분')">▾</button></div></th>
               <th><div class="th-inner">출발지<button class="col-filter-btn" onclick="openColFilter(event,'출발지')">▾</button></div></th>
               <th><div class="th-inner">도착지<button class="col-filter-btn" onclick="openColFilter(event,'도착지')">▾</button></div></th>
               <th><div class="th-inner">톤급<button class="col-filter-btn" onclick="openColFilter(event,'톤급')">▾</button></div></th>
-              <th><div class="th-inner">중량</div></th>
-              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">매출(원)</div></th>
-              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">하불(원)</div></th>
-              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">공헌이익</div></th>
-              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">이익률</div></th>
-              <th><div class="th-inner">상태<button class="col-filter-btn" onclick="openColFilter(event,'계약상태')">▾</button></div></th>
-              <th><div class="th-inner">S/O명</div></th>
+              <th><div class="th-inner">중량<button class="col-filter-btn" onclick="openColFilter(event,'중량')">▾</button><button class="col-sort-btn" onclick="setSort('중량',this)">↕</button></div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">매출(원)<button class="col-sort-btn" onclick="setSort('매출(원)',this)">↕</button></div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">하불(원)<button class="col-sort-btn" onclick="setSort('하불(원)',this)">↕</button></div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">공헌이익<button class="col-sort-btn" onclick="setSort('공헌이익(원)',this)">↕</button></div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">이익률<button class="col-sort-btn" onclick="setSort('공헌이익률',this)">↕</button></div></th>
+              <th><div class="th-inner">S/O명<button class="col-filter-btn" onclick="openColFilter(event,'비고')">▾</button></div></th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tblBody">
-            <tr><td colspan="16" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>
+            <tr><td colspan="15" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>
           </tbody>
         </table>
       </div>
@@ -1638,9 +1638,48 @@ function renderCatChart(data) {
 }
 
 // ══════════════════════════════════════════════════════
-// TABLE
+// TABLE SORT
 // ══════════════════════════════════════════════════════
 let tableShowAll = false;
+let sortField = '';    // field name
+let sortDir   = '';    // 'asc' | 'desc' | ''
+
+function setSort(field, btn) {
+  if (sortField === field) {
+    sortDir = sortDir === 'asc' ? 'desc' : sortDir === 'desc' ? '' : 'asc';
+    if (!sortDir) sortField = '';
+  } else {
+    sortField = field;
+    sortDir = 'asc';
+  }
+  // Update button styles
+  document.querySelectorAll('.col-sort-btn').forEach(b => b.classList.remove('asc','desc'));
+  if (sortDir) { btn.classList.add(sortDir); }
+  renderTable();
+}
+
+function sortData(data) {
+  if (!sortField || !sortDir) return data;
+  const numFields = new Set(['매출(원)','하불(원)','공헌이익(원)','중량']);
+  return [...data].sort((a, b) => {
+    let va, vb;
+    if (sortField === '연월') {
+      va = (+a['연도']||0)*100 + (+a['월']||0);
+      vb = (+b['연도']||0)*100 + (+b['월']||0);
+    } else if (numFields.has(sortField)) {
+      va = +a[sortField]||0;
+      vb = +b[sortField]||0;
+    } else if (sortField === '공헌이익률') {
+      va = parseFloat(a['공헌이익률'])||0;
+      vb = parseFloat(b['공헌이익률'])||0;
+    } else {
+      va = String(a[sortField]||'');
+      vb = String(b[sortField]||'');
+      return sortDir==='asc' ? va.localeCompare(vb,'ko') : vb.localeCompare(va,'ko');
+    }
+    return sortDir==='asc' ? va-vb : vb-va;
+  });
+}
 
 function updateTableDropdowns() {
   const clients  = [...new Set(allData.map(r=>r['고객(화주)']||'').filter(Boolean))].sort();
@@ -1678,39 +1717,39 @@ function renderTable() {
     filteredIndices.push(idx);
   });
   updateColFilterUI();
-  const data = filteredIndices.map(i=>allData[i]);
-  document.getElementById('tblCount').textContent='총 '+data.length+'건';
+  const rawData = filteredIndices.map(i=>allData[i]);
+  const data = sortData(rawData);
+  document.getElementById('tblCount').textContent='총 '+data.length+'건'+(sortField?` · ${sortField} ${sortDir==='asc'?'▲':'▼'}`:'');
   const tb=document.getElementById('tblBody');
-  if(!data.length){tb.innerHTML='<tr><td colspan="16" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';return;}
+  if(!data.length){tb.innerHTML='<tr><td colspan="15" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';return;}
   const limit = tableShowAll ? data.length : 200;
   const shown = data.slice(0, limit);
   tb.innerHTML = shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
     <td class="mono">${r['연도']||''}/${r['월']||''}</td>
-    <td class="bold" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
-    <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
+    <td class="bold" style="overflow:hidden;text-overflow:ellipsis;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
+    <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
     <td><span class="badge ${bc(r['용역구분'])}">${r['용역구분']||'—'}</span></td>
-    <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['출발지']||''}">${r['출발지']||'—'}</td>
-    <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['도착지']||''}">${r['도착지']||'—'}</td>
-    <td class="mono" style="text-align:center;">${r['톤급']||'—'}</td>
+    <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['출발지']||''}">${r['출발지']||'—'}</td>
+    <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['도착지']||''}">${r['도착지']||'—'}</td>
+    <td class="mono" style="text-align:center;overflow:hidden;text-overflow:ellipsis;">${r['톤급']||'—'}</td>
     <td class="num">${r['중량']||'—'}</td>
     <td class="num">${r['매출(원)']?fmt(r['매출(원)']):'—'}</td>
     <td class="num" style="font-weight:700;">${r['하불(원)']?fmt(r['하불(원)']):'—'}</td>
     <td class="num" style="color:var(--green);">${r['공헌이익(원)']?fmt(r['공헌이익(원)']):'—'}</td>
     <td class="num"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
-    <td><span class="badge ${bc(r['계약상태'])}">${r['계약상태']||'—'}</span></td>
-    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['비고']||''}">${r['비고']||'—'}</td>
-    <td><button onclick="deleteRow(${i})" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">삭제</button></td>
+    <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['비고']||''}">${r['비고']||'—'}</td>
+    <td><button onclick="deleteRow(${i})" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">삭제</button></td>
   </tr>`).join('');
   if(!tableShowAll && data.length > 200) {
-    tb.innerHTML += `<tr><td colspan="16" style="text-align:center;padding:14px;">
+    tb.innerHTML += `<tr><td colspan="15" style="text-align:center;padding:14px;">
       <button onclick="tableShowAll=true;renderTable();" style="border:none;border-radius:8px;background:var(--teal);color:#fff;padding:9px 28px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
         📋 전체 보기 (${data.length}건 모두 표시)
       </button>
       <div style="font-size:11px;color:var(--gray400);margin-top:6px;">현재 200건 표시 중</div>
     </td></tr>`;
   } else if(tableShowAll && data.length > 200) {
-    tb.innerHTML += `<tr><td colspan="16" style="text-align:center;padding:10px;">
+    tb.innerHTML += `<tr><td colspan="15" style="text-align:center;padding:10px;">
       <button onclick="tableShowAll=false;renderTable();" style="border:none;border-radius:8px;background:var(--gray100);color:var(--gray500);padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
         접기 (200건으로 줄이기)
       </button>
