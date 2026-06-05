@@ -543,23 +543,34 @@ td.bold { font-weight: 700; color: var(--navy); }
 .fsep { width: 1px; height: 18px; background: var(--gray200); flex-shrink: 0; }
 
 /* ══ CHART BARS ══════════════════════════════════════ */
-.chart-wrap { padding: 0 4px; }
-.chart-cols { display: flex; align-items: flex-end; gap: 4px; overflow: visible; padding-bottom: 2px; }
-.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
+.chart-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 4px; }
+.chart-cols { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 3px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
 .bar-col.active-month .bar-lbl { color: var(--teal); font-weight: 700; }
-.bar-col.active-month .bar-stack { background: rgba(0,184,169,.06); border-radius: 4px; }
-.bar-col.no-data .bar-lbl { color: var(--gray200); }
-.bar-col.no-data .bar-stack { border-bottom: 1px dashed var(--gray200); }
-.bar-top-lbl {
-  font-size: 7px; font-weight: 700; white-space: nowrap;
-  writing-mode: vertical-rl; transform: rotate(180deg);
-  max-height: 36px; overflow: hidden; text-overflow: ellipsis;
-  line-height: 1;
+.bar-col.active-month .bar-area { background: rgba(0,184,169,.06); border-radius: 4px; }
+.bar-col.no-data .bar-lbl { color: var(--gray300); }
+.bar-col.no-data .bar-area { border-bottom: 1px dashed var(--gray200); }
+/* 막대 위 숫자 레이블 */
+.bar-num {
+  font-size: 7px; font-weight: 700; color: var(--teal);
+  white-space: nowrap; line-height: 1.2; text-align: center;
+  flex-shrink: 0; height: 16px; display: flex; align-items: flex-end; overflow: hidden;
 }
-.bar-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 1px; width: 100%; justify-content: flex-start; height: 180px; }
+/* bar-area: 세로 공간 전부 차지, flex-grow로 비율 분배 */
+.bar-area {
+  flex: 1; min-height: 0; width: 100%;
+  display: flex; flex-direction: column;
+}
+/* bar-spacer: 막대 위 빈 공간 (flex-grow로 JS에서 지정) */
+.bar-spacer { min-height: 0; flex-shrink: 0; }
+/* bar-stack: flex-grow로 막대 전체 높이 차지 */
+.bar-stack {
+  display: flex; flex-direction: column-reverse;
+  align-items: center; width: 100%; min-height: 0;
+}
+/* bar-seg: flex-grow로 각 막대 비율 결정 */
 .bar-seg {
-  width: 100%; border-radius: 3px 3px 0 0; min-height: 2px;
-  transition: height .7s cubic-bezier(.34,1.56,.64,1);
+  width: 100%; border-radius: 3px 3px 0 0; flex-shrink: 0;
   position: relative; cursor: pointer;
 }
 .bar-seg:hover::after {
@@ -569,7 +580,7 @@ td.bold { font-weight: 700; color: var(--navy); }
   padding: 4px 8px; border-radius: 5px; white-space: nowrap; z-index: 10;
   font-family: 'Noto Sans KR';
 }
-.bar-lbl { font-size: 9px; color: var(--gray400); flex-shrink: 0; }
+.bar-lbl { font-size: 9px; color: var(--gray400); flex-shrink: 0; margin-top: 2px; }
 .chart-legend {
   display: flex; justify-content: center; gap: 14px;
   margin-top: 6px; flex-wrap: wrap; flex-shrink: 0;
@@ -1653,25 +1664,29 @@ function renderMonthChart(data) {
       ci:  rows.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0),
     };
   });
-  const maxV = Math.max(...byM.map(b=>Math.max(b.rev,b.cost,b.ci)),1);
-  const BAR_MAX = 180; // px
-  const h = v => v > 0 ? Math.max(Math.round((v/maxV)*BAR_MAX), 3) : 0;
+  // 비율 계산 — 최대값 기준 0~1000 정수 (flex-grow에 사용)
+  const maxV = Math.max(...byM.map(b=>b.rev),1);
+  const ratio = v => v > 0 ? Math.max(Math.round((v/maxV)*1000), 15) : 0;
 
   el.innerHTML = byM.map((d,i)=>{
     const isActive = selMonth === String(i+1);
     const hasData = d.rev > 0 || d.cost > 0;
-    const topLbls = hasData ? `
-      <div class="bar-top-lbl" style="color:var(--teal);" title="${i+1}월 매출">${fmtB(d.rev)}</div>
-      <div class="bar-top-lbl" style="color:var(--gold);" title="${i+1}월 하불">${fmtB(d.cost)}</div>
-      <div class="bar-top-lbl" style="color:var(--green);" title="${i+1}월 공헌이익">${fmtB(d.ci)}</div>
-    ` : '';
+    const rRev  = ratio(d.rev);
+    // spacer: 빈 공간 = 1000 - 가장 큰 막대(매출) 비율
+    const spacer = 1000 - rRev;
+    const topNum = hasData ? fmtB(d.rev) : '';
+    const rCost = d.cost > 0 ? Math.max(Math.round((d.cost/maxV)*1000), 10) : 0;
+    const rCi   = d.ci   > 0 ? Math.max(Math.round((d.ci  /maxV)*1000), 10) : 0;
     return `
     <div class="bar-col${isActive?' active-month':''}${!hasData?' no-data':''}">
-      <div style="display:flex;gap:2px;justify-content:center;flex-shrink:0;min-height:42px;align-items:flex-end;">${topLbls}</div>
-      <div class="bar-stack">
-        <div class="bar-seg" style="height:${h(d.rev)}px;background:var(--teal);opacity:.35;" data-tip="${i+1}월 매출: ${fmtB(d.rev)}"></div>
-        <div class="bar-seg" style="height:${h(d.cost)}px;background:var(--gold);" data-tip="${i+1}월 하불: ${fmtB(d.cost)}"></div>
-        <div class="bar-seg" style="height:${h(d.ci)}px;background:var(--green);" data-tip="${i+1}월 공헌이익: ${fmtB(d.ci)}"></div>
+      <div class="bar-num">${topNum}</div>
+      <div class="bar-area">
+        <div class="bar-spacer" style="flex:${Math.max(spacer,0)}"></div>
+        <div class="bar-stack" style="flex:${rRev}">
+          ${d.rev>0?`<div class="bar-seg" style="flex:${rRev};background:var(--teal);opacity:.35;" data-tip="${i+1}월 매출: ${fmtB(d.rev)}"></div>`:''}
+          ${d.cost>0?`<div class="bar-seg" style="flex:${rCost};background:var(--gold);" data-tip="${i+1}월 하불: ${fmtB(d.cost)}"></div>`:''}
+          ${d.ci>0?`<div class="bar-seg" style="flex:${rCi};background:var(--green);" data-tip="${i+1}월 공헌이익: ${fmtB(d.ci)}"></div>`:''}
+        </div>
       </div>
       <div class="bar-lbl">${i+1}월</div>
     </div>`;
