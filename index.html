@@ -65,27 +65,17 @@ body {
   position: sticky; top: 0; z-index: 200;
   box-shadow: 0 2px 16px rgba(0,0,0,.25);
 }
-/* 세방 CI 로고 — 좌측 */
+/* 세방 CI 벡터 로고 */
 .sebang-ci-logo {
-  display: flex; align-items: flex-end; gap: 5px;
-  flex-shrink: 0; line-height: 1;
+  flex-shrink: 0;
+  display: flex; align-items: center;
 }
-.sebang-wordmark {
-  display: flex; align-items: flex-end; gap: 0;
-  font-family: 'SEBANG_Gothic', sans-serif;
-  font-style: normal; font-weight: normal; line-height: 1;
-  letter-spacing: -0.5px; color: #fff;
+.sebang-ci-logo img {
+  height: 40px;
+  width: auto;
+  display: block;
 }
-/* SE 크게, BANG 작게 — CI 원본 비율 */
-.sebang-wordmark .se   { font-size: 34px; }
-.sebang-wordmark .bang { font-size: 22px; margin-bottom: 3px; }
-.sebang-corp {
-  font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,.6);
-  letter-spacing: .3px; font-style: normal;
-  font-family: 'Noto Sans KR', sans-serif;
-  margin-bottom: 2px;
-}
-/* 제목 — 정중앙 (absolute) */
+/* 제목 — 정중앙 */
 .header-center {
   position: absolute; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -553,7 +543,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 .fsep { width: 1px; height: 18px; background: var(--gray200); flex-shrink: 0; }
 
 /* ══ CHART BARS ══════════════════════════════════════ */
-.chart-wrap { padding: 0 4px; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.chart-wrap { padding: 0 4px; }
 .chart-cols { display: flex; align-items: flex-end; gap: 4px; overflow: visible; padding-bottom: 2px; }
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
 .bar-col.active-month .bar-lbl { color: var(--teal); font-weight: 700; }
@@ -725,12 +715,9 @@ td.bold { font-weight: 700; color: var(--navy); }
 <!-- ══ HEADER ══════════════════════════════════════════ -->
 <header class="app-header">
 
-  <!-- 좌측: 세방 CI 로고 -->
+  <!-- 좌측: 세방 CI 벡터 로고 -->
   <div class="sebang-ci-logo">
-    <div class="sebang-wordmark">
-      <span class="se">SE</span><span class="bang">BANG</span>
-    </div>
-    <span class="sebang-corp">세방(주)</span>
+    <img src="sebang_ci_white.svg" alt="SEBANG CI">
   </div>
 
   <!-- 가운데: 제목 (absolute 정중앙) -->
