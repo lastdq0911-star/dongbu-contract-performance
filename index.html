@@ -232,6 +232,8 @@ body {
 /* ══ VIEW PAGES ══════════════════════════════════════ */
 .view { display: none; }
 .view.active { display: block; }
+/* 대시보드는 flex 레이아웃 — active일 때만 적용 */
+#view-dash.active { display: flex; }
 
 /* ══ PAGE TITLE ══════════════════════════════════════ */
 .page-title {
@@ -684,7 +686,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 /* ══ DASHBOARD ONE-SCREEN LAYOUT ══════════════════════ */
 #view-dash {
   height: calc(100vh - 64px - 40px);
-  display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  flex-direction: column; gap: 6px; overflow: hidden;
 }
 .dash-hdr { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .dash-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; flex-shrink: 0; }
