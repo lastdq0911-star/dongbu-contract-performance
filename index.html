@@ -703,8 +703,14 @@ td.bold { font-weight: 700; color: var(--navy); }
   }
   .sebang-ci-logo img { height: 28px; }
   .header-center h1 { font-size: 13px; }
-  .header-center p  { display: none; }
+  .header-center p  { font-size: 9px; display: block; opacity: .75; }
   .header-right #userInfo { display: none !important; }
+
+  /* 모바일: 실적현황(dash)만 노출, 나머지 nav 숨김 */
+  .nav-item[data-view="partner"],
+  .nav-item[data-view="client"],
+  .nav-item[data-view="table"],
+  .nav-item[data-view="upload"] { display: none !important; }
   .admin-btn { font-size: 11px; padding: 5px 8px; }
 
   /* 좌측 네비 → 하단 고정 탭바로 전환 */
@@ -873,17 +879,17 @@ td.bold { font-weight: 700; color: var(--navy); }
   <button class="nav-item active" data-view="dash" onclick="goView('dash', this)">
     <span class="ni">📊</span>실적현황
   </button>
-  <button class="nav-item" data-view="upload" onclick="goView('upload', this)">
-    <span class="ni">📤</span>업로드
-  </button>
-  <button class="nav-item" data-view="table" onclick="tableSearched=false;selectedBatchId=null;goView('table',this)">
-    <span class="ni">📋</span>전체데이터
-  </button>
   <button class="nav-item" data-view="partner" onclick="goView('partner', this)">
     <span class="ni">🏢</span>협력사별
   </button>
   <button class="nav-item" data-view="client" onclick="goView('client', this)">
     <span class="ni">👤</span>고객별
+  </button>
+  <button class="nav-item" data-view="table" onclick="tableSearched=false;selectedBatchId=null;goView('table',this)">
+    <span class="ni">📋</span>전체데이터
+  </button>
+  <button class="nav-item" data-view="upload" onclick="goView('upload', this)">
+    <span class="ni">📤</span>업로드
   </button>
   <button class="nav-item" data-view="batch" id="navBatch" style="display:none;" onclick="goView('batch', this)">
     <span class="ni">🗂</span>배치관리
