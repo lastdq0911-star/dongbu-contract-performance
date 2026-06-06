@@ -2160,9 +2160,9 @@ function openPartnerPopup(name) {
     <tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:8px 10px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
       <td style="padding:8px 10px;font-weight:700;color:var(--navy);">${r.client}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';">${fmtMan(r.rev)}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmtMan(r.cost)}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--green);">${fmtMan(r.ci)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtMan(r.rev)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';font-weight:700;white-space:nowrap;">${fmtMan(r.cost)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--green);white-space:nowrap;">${fmtMan(r.ci)}</td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--gray500);">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
       <td style="padding:8px 10px;text-align:right;color:var(--gray400);">${r.cnt}건</td>
       <td style="padding:8px 10px;width:90px;">
