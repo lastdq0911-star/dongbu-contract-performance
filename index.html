@@ -1047,7 +1047,8 @@ td.bold { font-weight: 700; color: var(--navy); }
       <label>기간</label>
       <select class="fsel" id="fY1"></select>
       <select class="fsel" id="fM1">
-        <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="" selected>—</option>
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
@@ -1055,10 +1056,11 @@ td.bold { font-weight: 700; color: var(--navy); }
       <span style="color:var(--gray400);font-weight:700;">~</span>
       <select class="fsel" id="fY2"></select>
       <select class="fsel" id="fM2">
+        <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
-        <option value="10">10월</option><option value="11">11월</option><option value="12" selected>12월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <div class="fsep"></div>
       <label>고객</label>
@@ -1154,7 +1156,8 @@ td.bold { font-weight: 700; color: var(--navy); }
       <label>기간</label>
       <select class="fsel" id="pY1" onchange="renderPartner()"></select>
       <select class="fsel" id="pM1" onchange="renderPartner()">
-        <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="" selected>—</option>
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
@@ -1162,10 +1165,11 @@ td.bold { font-weight: 700; color: var(--navy); }
       <span style="color:var(--gray400);font-weight:700;">~</span>
       <select class="fsel" id="pY2" onchange="renderPartner()"></select>
       <select class="fsel" id="pM2" onchange="renderPartner()">
+        <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
-        <option value="10">10월</option><option value="11">11월</option><option value="12" selected>12월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <div class="fsep"></div>
       <input class="finp" id="pSrch" placeholder="🔍 검색" oninput="renderPartner()" style="min-width:100px;">
@@ -1202,7 +1206,8 @@ td.bold { font-weight: 700; color: var(--navy); }
       <label>기간</label>
       <select class="fsel" id="cY1" onchange="renderClient()"></select>
       <select class="fsel" id="cM1" onchange="renderClient()">
-        <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="" selected>—</option>
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
@@ -1210,10 +1215,11 @@ td.bold { font-weight: 700; color: var(--navy); }
       <span style="color:var(--gray400);font-weight:700;">~</span>
       <select class="fsel" id="cY2" onchange="renderClient()"></select>
       <select class="fsel" id="cM2" onchange="renderClient()">
+        <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
-        <option value="10">10월</option><option value="11">11월</option><option value="12" selected>12월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <div class="fsep"></div>
       <input class="finp" id="cSrch" placeholder="🔍 고객·협력사 검색" oninput="renderClient()" style="min-width:100px;">
@@ -1900,25 +1906,35 @@ function populateYearSelects(){
     el.innerHTML = yOpts;
     el.value = (prev && years.includes(+prev)) ? prev : defaultVal;
   };
+  // 연도 셀렉트에 빈 옵션 포함 버전 (전체데이터/협력사별/고객별용)
+  const setYearSelBlank = (id) => {
+    const el = document.getElementById(id); if (!el) return;
+    const prev = el.value;
+    el.innerHTML = '<option value="">—</option>' + yOpts;
+    el.value = (prev && years.includes(+prev)) ? prev : '';
+  };
   const setMonthSel = (id, defaultVal) => {
     const el = document.getElementById(id); if (!el) return;
     // 최초 1회(초기화 전)만 해당월로 세팅, 이후엔 사용자 값 유지
     if (!_periodInited) el.value = defaultVal;
   };
+  const setMonthSelBlank = (id) => {
+    const el = document.getElementById(id); if (!el) return;
+    if (!_periodInited) el.value = '';
+  };
 
   // 실적현황: 해당월~해당월 (기존 유지)
   setYearSel('dashY1', curY); setYearSel('dashY2', curY);
   setMonthSel('dashM1', curM); setMonthSel('dashM2', curM);
-  // 협력사별: 전체 기간 (가장 이른 연도 1월 ~ 현재)
-  const minY = String(years[years.length-1] || curY);
-  setYearSel('pY1', minY); setYearSel('pY2', curY);
-  if (!_periodInited) { document.getElementById('pM1').value='1'; document.getElementById('pM2').value=curM; }
-  // 고객별: 전체 기간
-  setYearSel('cY1', minY); setYearSel('cY2', curY);
-  if (!_periodInited) { document.getElementById('cM1').value='1'; document.getElementById('cM2').value=curM; }
-  // 전체데이터: 전체 기간
-  setYearSel('fY1', minY); setYearSel('fY2', curY);
-  if (!_periodInited) { document.getElementById('fM1').value='1'; document.getElementById('fM2').value=curM; }
+  // 협력사별: 초기 빈값 (사용자가 직접 조건 입력)
+  setYearSelBlank('pY1'); setYearSelBlank('pY2');
+  setMonthSelBlank('pM1'); setMonthSelBlank('pM2');
+  // 고객별: 초기 빈값
+  setYearSelBlank('cY1'); setYearSelBlank('cY2');
+  setMonthSelBlank('cM1'); setMonthSelBlank('cM2');
+  // 전체데이터: 초기 빈값
+  setYearSelBlank('fY1'); setYearSelBlank('fY2');
+  setMonthSelBlank('fM1'); setMonthSelBlank('fM2');
   _periodInited = true;
   // 배치관리 연도 (전체 옵션 포함)
   const bm=document.getElementById('bmYear');
@@ -2162,13 +2178,13 @@ function openPartnerPopup(name) {
 
   const body = rows.map((r,i)=>`
     <tr style="border-bottom:1px solid var(--gray100);">
-      <td style="padding:5px 6px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
-      <td style="padding:5px 6px;font-weight:700;color:var(--navy);">${r.client}</td>
-      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtMan(r.rev)}</td>
-      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';font-weight:700;white-space:nowrap;">${fmtMan(r.cost)}</td>
-      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';color:var(--green);white-space:nowrap;">${fmtMan(r.ci)}</td>
-      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';color:var(--gray500);white-space:nowrap;">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
-      <td style="padding:5px 6px;text-align:right;color:var(--gray400);white-space:nowrap;">${r.cnt}건</td>
+      <td style="padding:6px 8px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
+      <td style="padding:6px 8px;font-weight:700;color:var(--navy);">${r.client}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtMan(r.rev)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:700;white-space:nowrap;">${fmtMan(r.cost)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:var(--green);white-space:nowrap;">${fmtMan(r.ci)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:var(--gray500);white-space:nowrap;">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
+      <td style="padding:6px 8px;text-align:right;color:var(--gray400);white-space:nowrap;">${r.cnt}건</td>
     </tr>`).join('');
 
   document.getElementById('partnerPopupTitle').innerHTML =
@@ -2194,15 +2210,15 @@ function openPartnerPopup(name) {
       </div>
     </div>
     <div style="overflow:auto;max-height:50vh;border:1px solid var(--gray200);border-radius:8px;">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="background:var(--navy);color:#fff;position:sticky;top:0;z-index:1;">
-          <th style="padding:5px 6px;text-align:center;white-space:nowrap;">#</th>
-          <th style="padding:5px 6px;text-align:left;">고객(화주)</th>
-          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">매출</th>
-          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">하불</th>
-          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">공헌이익</th>
-          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">이익률</th>
-          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">건수</th>
+          <th style="padding:6px 8px;text-align:center;white-space:nowrap;">#</th>
+          <th style="padding:6px 8px;text-align:left;">고객(화주)</th>
+          <th style="padding:6px 8px;text-align:right;white-space:nowrap;">매출</th>
+          <th style="padding:6px 8px;text-align:right;white-space:nowrap;">하불</th>
+          <th style="padding:6px 8px;text-align:right;white-space:nowrap;">공헌이익</th>
+          <th style="padding:6px 8px;text-align:right;white-space:nowrap;">이익률</th>
+          <th style="padding:6px 8px;text-align:right;white-space:nowrap;">건수</th>
         </tr></thead>
         <tbody>${body}</tbody>
       </table>
@@ -2295,7 +2311,7 @@ function updateTableDropdowns() {
   if(uploaders.includes(prevU)) selU.value = prevU;
 }
 
-let tableSearched = true; // 탭 진입 시 바로 전체 조회
+let tableSearched = false; // 조회 버튼을 눌렀는지 여부
 
 function doTableSearch() {
   tableSearched = true;
@@ -2315,7 +2331,7 @@ function resetTableFilters() {
   colFilters = {};
   sortField  = ''; sortDir = '';
   document.querySelectorAll('.col-sort-btn').forEach(b=>b.classList.remove('asc','desc'));
-  tableSearched  = true;
+  tableSearched  = false;
   tableShowAll   = false;
   renderTable();
 }
@@ -2495,7 +2511,15 @@ function renderPartner() {
   const srch    = (document.getElementById('pSrch')||{value:''}).value.trim().toLowerCase();
   const head    = document.getElementById('partnerHead');
   const tb      = document.getElementById('partnerBody');
-  if(!y1||!y2) return;
+  if(!y1||!y2){
+    if(head) head.innerHTML='';
+    if(tb) tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--gray400);">
+      <div style="font-size:28px;margin-bottom:10px;">🔍</div>
+      <div style="font-size:14px;font-weight:700;color:var(--gray500);margin-bottom:6px;">조건을 선택하고 조회하세요</div>
+      <div style="font-size:12px;">연도·월 등 기간 조건 설정 후 <strong style="color:var(--teal);">조회</strong> 버튼을 누르세요</div>
+    </td></tr>`;
+    return;
+  }
   const {lo,hi}=periodBounds(y1,m1,y2,m2);
 
   // 필터: 기간·지사
@@ -2618,7 +2642,15 @@ function renderClient() {
   const q       = document.getElementById('cSrch').value.trim().toLowerCase();
   const head    = document.getElementById('clientHead');
   const tb      = document.getElementById('clientBody');
-  if(!y1||!y2) return;
+  if(!y1||!y2){
+    if(head) head.innerHTML='';
+    if(tb) tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--gray400);">
+      <div style="font-size:28px;margin-bottom:10px;">🔍</div>
+      <div style="font-size:14px;font-weight:700;color:var(--gray500);margin-bottom:6px;">조건을 선택하고 조회하세요</div>
+      <div style="font-size:12px;">연도·월 등 기간 조건 설정 후 <strong style="color:var(--teal);">조회</strong> 버튼을 누르세요</div>
+    </td></tr>`;
+    return;
+  }
   const {lo,hi}=periodBounds(y1,m1,y2,m2);
 
   let data = allData.filter(r=>{
