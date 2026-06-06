@@ -1442,11 +1442,6 @@ const fmtEok = n => {
   if (!n && n!==0) return '—';
   return (n/1e8).toFixed(1)+'억';
 };
-// 항상 '만원' 단위(천단위 콤마)로 표시 — 협력사 팝업 KPI 전용
-const fmtMan = n => {
-  if (!n && n!==0) return '—';
-  return Math.round(n/1e4).toLocaleString('ko-KR')+'만원';
-};
 const pct = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '—';
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
@@ -2181,17 +2176,17 @@ function openPartnerPopup(name) {
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:90px;background:var(--teal-ll);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">매출</div>
-        <div style="font-size:16px;font-weight:800;color:var(--teal-d);">${fmtMan(tRev)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal-d);">${fmtEok(tRev)}</div>
         <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tRev)}원</div>
       </div>
       <div style="flex:1;min-width:90px;background:var(--gold-l);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">하불</div>
-        <div style="font-size:16px;font-weight:800;color:var(--gold);">${fmtMan(tCost)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--gold);">${fmtEok(tCost)}</div>
         <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tCost)}원</div>
       </div>
       <div style="flex:1;min-width:90px;background:var(--green-l);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">공헌이익</div>
-        <div style="font-size:16px;font-weight:800;color:var(--green);">${fmtMan(tCi)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green);">${fmtEok(tCi)}</div>
         <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tCi)}원 (${tRev?((tCi/tRev*100).toFixed(1)+'%'):'—'})</div>
       </div>
     </div>
