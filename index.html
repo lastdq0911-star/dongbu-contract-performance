@@ -853,7 +853,7 @@ td.bold { font-weight: 700; color: var(--navy); }
   <button class="nav-item" data-view="upload" onclick="goView('upload', this)">
     <span class="ni">📤</span>업로드
   </button>
-  <button class="nav-item" data-view="table" onclick="goView('table', this)">
+  <button class="nav-item" data-view="table" onclick="tableSearched=false;selectedBatchId=null;goView('table',this)">
     <span class="ni">📋</span>전체데이터
   </button>
   <button class="nav-item" data-view="partner" onclick="goView('partner', this)">
@@ -1748,8 +1748,6 @@ function goViewByName(name) {
 }
 function goView(name, btn) {
   if (name==='batch' && !isAdminUser()) { toast('⚠ 배치관리는 관리자 전용입니다'); return; }
-  // 전체데이터 nav 직접 클릭 시 배치 필터 초기화 (viewBatchInTable과 구분)
-  if (name==='table' && !btn?._fromBatch) { selectedBatchId = null; tableSearched = false; }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
@@ -2223,10 +2221,7 @@ function renderBatchManager() {
 function viewBatchInTable(batchId) {
   selectedBatchId = batchId;
   tableSearched = true;
-  const btn = [...document.querySelectorAll('.nav-item')].find(b=>b.getAttribute('data-view')==='table');
-  if (btn) btn._fromBatch = true;
   goViewByName('table');
-  if (btn) btn._fromBatch = false;
   renderBatchList();
   renderTable();
   const b = batches.find(x=>x.id===batchId);
@@ -2738,7 +2733,17 @@ function _cacheTableOriginals(){
   if(!_origThs){ _origThs=[...head.querySelector('tr').children]; }
   if(!_origCols){ const cg=table.querySelector('colgroup'); _origCols=cg?[...cg.children]:[]; }
   // 원본 인덱스 표시 (한 번만)
-  _origThs.forEach((th,i)=>{ th.dataset.col=i; th.setAttribute('draggable','true'); th.classList.add('th-draggable'); });
+  _origThs.forEach((th,i)=>{
+    th.dataset.col=i; th.setAttribute('draggable','true'); th.classList.add('th-draggable');
+    th.style.position = 'relative';
+    // 리사이즈 핸들 (중복 방지)
+    if (!th.querySelector('.resize-handle')) {
+      const h = document.createElement('div');
+      h.className = 'resize-handle';
+      h.addEventListener('mousedown', e => startColResize(e, th));
+      th.appendChild(h);
+    }
+  });
   return true;
 }
 function setupColDrag(){
