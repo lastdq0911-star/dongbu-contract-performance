@@ -553,6 +553,21 @@ td.bold { font-weight: 700; color: var(--navy); }
   transition: all .15s; font-family: inherit;
 }
 .metric-tog.active { border-color: var(--teal); background: var(--teal-l); color: var(--teal); }
+/* 협력사 클릭 가능 표시 */
+.rank-clickable { cursor: pointer; border-radius: 6px; transition: background .12s; }
+.rank-clickable:hover { background: var(--teal-ll); }
+/* 협력사 → 고객별 팝업 */
+.ppopup-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(15,23,42,.5); backdrop-filter: blur(2px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+.ppopup-overlay.show { display: flex; animation: fadeIn .2s ease; }
+.ppopup-box {
+  background: #fff; border-radius: 16px; padding: 20px 22px;
+  width: 100%; max-width: 720px; max-height: 86vh; overflow: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
 
 /* ══ PARTNER LIST ════════════════════════════════════ */
 .rank-list { display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
@@ -1299,6 +1314,20 @@ td.bold { font-weight: 700; color: var(--navy); }
   </div>
 </div>
 
+<!-- ══ 협력사 → 고객별 실적 팝업 ══════════════════════ -->
+<div class="ppopup-overlay" id="partnerPopup" onclick="if(event.target===this)closePartnerPopup()">
+  <div class="ppopup-box">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+      <div>
+        <div id="partnerPopupTitle" style="font-size:18px;font-weight:800;color:var(--navy);"></div>
+        <div id="partnerPopupSub" style="font-size:12px;color:var(--gray400);margin-top:2px;"></div>
+      </div>
+      <button onclick="closePartnerPopup()" style="border:none;background:var(--gray100);border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--gray500);font-weight:800;flex-shrink:0;">✕</button>
+    </div>
+    <div id="partnerPopupBody" style="margin-top:10px;"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1338,6 +1367,8 @@ let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let _periodInited = false;  // 기간 셀렉트 최초 초기화 여부
 let chartMetrics = new Set(['rev','cost','ci']); // 차트 지표 선택 상태
+let _dashData = [];          // 현재 대시보드 필터된 데이터
+let _dashPeriodLabel = '';   // 현재 대시보드 기간 라벨
 let selectedBatchId = null; // 전체데이터에서 선택된 배치 필터
 let pendingRows = [];
 let previewShowAll = false;
@@ -1405,6 +1436,11 @@ const fmtB = n => {
   if (a>=1e8) return (n/1e8).toFixed(1)+'억';
   if (a>=1e4) return Math.round(n/1e4)+'만';
   return fmt(n);
+};
+// 항상 '억' 단위(소수점 첫째자리)로 표시 — 차트 지표 단위 통일용
+const fmtEok = n => {
+  if (!n && n!==0) return '—';
+  return (n/1e8).toFixed(1)+'억';
 };
 const pct = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '—';
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
@@ -1895,6 +1931,8 @@ function renderDash() {
 
   let data = allData.filter(r=>inPeriod(r,lo,hi));
   if (branch) data = data.filter(r=>r['지사']===branch);
+  _dashData = data;        // 협력사 팝업 등에서 재사용
+  _dashPeriodLabel = periodLabel(+y1,+m1,+y2,+m2) + (branch?' · '+branch:'');
 
   document.getElementById('dashSub').textContent =
     `${periodLabel(+y1,+m1,+y2,+m2)} · ${branch||'전체 지사'}`;
@@ -1983,23 +2021,20 @@ function renderMonthChart(data, lo, hi) {
       if (val > 0) {
         rects += `<rect x="${gx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh.toFixed(1)}"
           fill="${COLORS[metric]}" rx="2" opacity="${metric==='rev'?0.5:1}"/>`;
-        // 금액 레이블
-        if (bh > 22) {
+        // 금액 레이블 (매출·하불·공헌이익 모두 '억' 단위로 통일)
+        if (bh > 16) {
           labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+3).toFixed(1)}" text-anchor="middle"
-            font-size="7.5" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${fmtB(val)}</text>`;
-          if (metric==='ci' && d.rev>0) {
-            const rate = (d.ci/d.rev*100).toFixed(1)+'%';
-            labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+13).toFixed(1)}" text-anchor="middle"
-              font-size="7" fill="rgba(255,255,255,.85)" font-weight="600" font-family="DM Mono,monospace">(${rate})</text>`;
-          }
-        } else if (bh > 0) {
+            font-size="7.5" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${fmtEok(val)}</text>`;
+        } else {
           labels += `<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle"
-            font-size="7" fill="${COLORS[metric]}" font-weight="700" font-family="DM Mono,monospace">${fmtB(val)}</text>`;
-          if (metric==='ci' && d.rev>0) {
-            const rate = (d.ci/d.rev*100).toFixed(1)+'%';
-            labels += `<text x="${cx.toFixed(1)}" y="${(by-11).toFixed(1)}" text-anchor="middle"
-              font-size="7" fill="${COLORS[metric]}" font-weight="600" font-family="DM Mono,monospace">(${rate})</text>`;
-          }
+            font-size="7" fill="${COLORS[metric]}" font-weight="700" font-family="DM Mono,monospace">${fmtEok(val)}</text>`;
+        }
+        // 공헌이익률은 막대 '아래쪽'(바닥 밑)에 별도 표시
+        if (metric==='ci' && d.rev>0) {
+          const rate = (d.ci/d.rev*100).toFixed(1)+'%';
+          const baseY = padT + cH; // 막대 바닥(x축 기준선)
+          labels += `<text x="${cx.toFixed(1)}" y="${(baseY+9).toFixed(1)}" text-anchor="middle"
+            font-size="7" fill="${COLORS['ci']}" font-weight="700" font-family="DM Mono,monospace">${rate}</text>`;
         }
       }
     });
@@ -2080,7 +2115,7 @@ function renderTopPartners(data) {
   if(!top.length){el.innerHTML='<div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>';return;}
   const maxC=top[0][1].cost||1;
   el.innerHTML=top.map(([name,{cost,branch}],i)=>`
-    <div class="rank-row">
+    <div class="rank-row rank-clickable" onclick="openPartnerPopup('${name.replace(/'/g,"\\'")}')" title="클릭하면 고객별 실적 보기">
       <div class="rank-no${i<3?' top':''}">${i+1}</div>
       <div style="flex:1;min-width:0;">
         <div class="rank-name" title="${name}">${name}</div>
@@ -2089,6 +2124,86 @@ function renderTopPartners(data) {
       <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round((cost/maxC)*100)}%;"></div></div>
       <div class="rank-val">${fmtB(cost)}</div>
     </div>`).join('');
+}
+
+// 협력사 클릭 → 해당 협력사의 고객별 실적 팝업
+function openPartnerPopup(name) {
+  const recs = _dashData.filter(r => (r['협력사명']||'(미확인)') === name);
+  if (!recs.length) { toast('해당 협력사 데이터가 없습니다'); return; }
+
+  // 고객별 집계
+  const byC = {};
+  recs.forEach(r => {
+    const c = r['고객(화주)'] || '(미지정)';
+    if (!byC[c]) byC[c] = { rev:0, cost:0, cnt:0 };
+    byC[c].rev  += (+r['매출(원)']||0);
+    byC[c].cost += (+r['하불(원)']||0);
+    byC[c].cnt  += 1;
+  });
+  const rows = Object.entries(byC)
+    .map(([c,v]) => ({ client:c, ...v, ci:v.rev-v.cost }))
+    .sort((a,b) => b.cost - a.cost);
+
+  const tRev  = rows.reduce((s,r)=>s+r.rev,0);
+  const tCost = rows.reduce((s,r)=>s+r.cost,0);
+  const tCi   = tRev - tCost;
+  const tCnt  = rows.reduce((s,r)=>s+r.cnt,0);
+  const maxCost = Math.max(...rows.map(r=>r.cost), 1);
+
+  const body = rows.map((r,i)=>`
+    <tr style="border-bottom:1px solid var(--gray100);">
+      <td style="padding:8px 10px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
+      <td style="padding:8px 10px;font-weight:700;color:var(--navy);">${r.client}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';">${fmt(r.rev)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmt(r.cost)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--green);">${fmt(r.ci)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--gray500);">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--gray400);">${r.cnt}건</td>
+      <td style="padding:8px 10px;width:90px;">
+        <div style="height:5px;background:var(--gray100);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${Math.round(r.cost/maxCost*100)}%;background:var(--gold);border-radius:3px;"></div>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('partnerPopupTitle').innerHTML =
+    `🏢 ${name} <span style="font-size:12px;font-weight:500;color:var(--gray400);">· 고객별 실적</span>`;
+  document.getElementById('partnerPopupSub').textContent =
+    `${_dashPeriodLabel} · 고객 ${rows.length}개사 · ${tCnt}건`;
+  document.getElementById('partnerPopupBody').innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:90px;background:var(--teal-ll);border-radius:8px;padding:8px 12px;">
+        <div style="font-size:11px;color:var(--gray500);">매출</div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal-d);">${fmtB(tRev)}</div>
+      </div>
+      <div style="flex:1;min-width:90px;background:var(--gold-l);border-radius:8px;padding:8px 12px;">
+        <div style="font-size:11px;color:var(--gray500);">하불</div>
+        <div style="font-size:16px;font-weight:800;color:var(--gold);">${fmtB(tCost)}</div>
+      </div>
+      <div style="flex:1;min-width:90px;background:var(--green-l);border-radius:8px;padding:8px 12px;">
+        <div style="font-size:11px;color:var(--gray500);">공헌이익</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green);">${fmtB(tCi)} <span style="font-size:11px;font-weight:600;">(${tRev?((tCi/tRev*100).toFixed(1)+'%'):'—'})</span></div>
+      </div>
+    </div>
+    <div style="overflow:auto;max-height:50vh;border:1px solid var(--gray200);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:var(--navy);color:#fff;position:sticky;top:0;z-index:1;">
+          <th style="padding:8px 10px;text-align:center;">#</th>
+          <th style="padding:8px 10px;text-align:left;">고객(화주)</th>
+          <th style="padding:8px 10px;text-align:right;">매출</th>
+          <th style="padding:8px 10px;text-align:right;">하불</th>
+          <th style="padding:8px 10px;text-align:right;">공헌이익</th>
+          <th style="padding:8px 10px;text-align:right;">이익률</th>
+          <th style="padding:8px 10px;text-align:right;">건수</th>
+          <th style="padding:8px 10px;"></th>
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+  document.getElementById('partnerPopup').classList.add('show');
+}
+function closePartnerPopup() {
+  document.getElementById('partnerPopup').classList.remove('show');
 }
 
 function renderCatChart(data) {
