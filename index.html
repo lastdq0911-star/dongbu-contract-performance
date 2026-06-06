@@ -2598,51 +2598,60 @@ function openPartnerPopup(name) {
   const tCnt  = rows.reduce((s,r)=>s+r.cnt,0);
   const maxCost = Math.max(...rows.map(r=>r.cost), 1);
 
+  const ciRate = tRev ? (tCi/tRev*100).toFixed(1)+'%' : '—';
+
   const body = rows.map((r,i)=>`
     <tr style="border-bottom:1px solid var(--gray100);">
-      <td style="padding:6px 8px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
-      <td style="padding:6px 8px;font-weight:700;color:var(--navy);">${r.client}</td>
+      <td style="padding:6px 8px;font-weight:700;color:var(--gray400);text-align:center;white-space:nowrap;">${i+1}</td>
+      <td style="padding:6px 8px;font-weight:700;color:var(--navy);word-break:keep-all;">${r.client}</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtMan(r.rev)}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:700;white-space:nowrap;">${fmtMan(r.cost)}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:var(--green);white-space:nowrap;">${fmtMan(r.ci)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:700;color:var(--gold);white-space:nowrap;">${fmtMan(r.cost)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:${r.ci>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtMan(r.ci)}</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:var(--gray500);white-space:nowrap;">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
-      <td style="padding:6px 8px;text-align:right;color:var(--gray400);white-space:nowrap;">${r.cnt}건</td>
     </tr>`).join('');
+
+  const totRow = `
+    <tr style="background:var(--gray50);border-top:2px solid var(--navy);">
+      <td colspan="2" style="padding:7px 8px;font-weight:800;color:var(--navy);">합계</td>
+      <td style="padding:7px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmtMan(tRev)}</td>
+      <td style="padding:7px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--gold);white-space:nowrap;">${fmtMan(tCost)}</td>
+      <td style="padding:7px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtMan(tCi)}</td>
+      <td style="padding:7px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--gray500);white-space:nowrap;">${ciRate}</td>
+    </tr>`;
 
   document.getElementById('partnerPopupTitle').innerHTML =
     `🏢 ${name} <span style="font-size:12px;font-weight:500;color:var(--gray400);">· 고객별 실적</span>`;
   document.getElementById('partnerPopupSub').textContent =
-    `${_dashPeriodLabel} · 고객 ${rows.length}개사 · ${tCnt}건`;
+    `${_dashPeriodLabel} · 고객 ${rows.length}개사`;
   document.getElementById('partnerPopupBody').innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:90px;background:var(--teal-ll);border-radius:8px;padding:8px 12px;">
+      <div style="flex:1;min-width:80px;background:var(--teal-ll);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">매출</div>
-        <div style="font-size:16px;font-weight:800;color:var(--teal-d);">${fmtEok(tRev)}</div>
-        <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tRev)}원</div>
+        <div style="font-size:15px;font-weight:800;color:var(--teal-d);">${fmtEok(tRev)}</div>
+        <div style="font-size:10px;color:var(--gray400);margin-top:1px;">${fmt(tRev)}원</div>
       </div>
-      <div style="flex:1;min-width:90px;background:var(--gold-l);border-radius:8px;padding:8px 12px;">
+      <div style="flex:1;min-width:80px;background:var(--gold-l);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">하불</div>
-        <div style="font-size:16px;font-weight:800;color:var(--gold);">${fmtEok(tCost)}</div>
-        <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tCost)}원</div>
+        <div style="font-size:15px;font-weight:800;color:var(--gold);">${fmtEok(tCost)}</div>
+        <div style="font-size:10px;color:var(--gray400);margin-top:1px;">${fmt(tCost)}원</div>
       </div>
-      <div style="flex:1;min-width:90px;background:var(--green-l);border-radius:8px;padding:8px 12px;">
+      <div style="flex:1;min-width:80px;background:var(--green-l);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">공헌이익</div>
-        <div style="font-size:16px;font-weight:800;color:var(--green);">${fmtEok(tCi)}</div>
-        <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tCi)}원 (${tRev?((tCi/tRev*100).toFixed(1)+'%'):'—'})</div>
+        <div style="font-size:15px;font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};">${fmtEok(tCi)}</div>
+        <div style="font-size:10px;color:var(--gray400);margin-top:1px;">${ciRate}</div>
       </div>
     </div>
-    <div style="overflow:auto;max-height:50vh;border:1px solid var(--gray200);border-radius:8px;">
+    <div style="overflow:auto;max-height:48vh;border:1px solid var(--gray200);border-radius:8px;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="background:var(--navy);color:#fff;position:sticky;top:0;z-index:1;">
           <th style="padding:6px 8px;text-align:center;white-space:nowrap;">#</th>
-          <th style="padding:6px 8px;text-align:left;">고객(화주)</th>
+          <th style="padding:6px 8px;text-align:left;white-space:nowrap;">고객(화주)</th>
           <th style="padding:6px 8px;text-align:right;white-space:nowrap;">매출</th>
           <th style="padding:6px 8px;text-align:right;white-space:nowrap;">하불</th>
           <th style="padding:6px 8px;text-align:right;white-space:nowrap;">공헌이익</th>
           <th style="padding:6px 8px;text-align:right;white-space:nowrap;">이익률</th>
-          <th style="padding:6px 8px;text-align:right;white-space:nowrap;">건수</th>
         </tr></thead>
-        <tbody>${body}</tbody>
+        <tbody>${body}${totRow}</tbody>
       </table>
     </div>`;
   document.getElementById('partnerPopup').classList.add('show');
