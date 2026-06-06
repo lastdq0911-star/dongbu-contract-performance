@@ -1,35 +1,50 @@
-// Generates icon-192.png and icon-512.png using pure Node (no canvas dependency)
-// Uses SVG → inline data URI written as PNG via sharp-free approach with raw pixel writing
-// We'll use the Jimp-free method: write a minimal SVG and use puppeteer to screenshot it
-
 const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 
-const SVG = (size) => `
-<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a2744"/>
-      <stop offset="100%" style="stop-color:#253358"/>
-    </linearGradient>
-    <linearGradient id="teal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00d4c3"/>
-      <stop offset="100%" style="stop-color:#00b8a9"/>
-    </linearGradient>
-  </defs>
-  <!-- 배경 -->
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <!-- 세방 CI: 'S' 형태 곡선 장식 -->
-  <path d="M 100 310 Q 100 390 180 390 L 332 390 Q 412 390 412 330 Q 412 270 332 260 L 200 245 Q 140 238 140 185 Q 140 130 200 130 L 330 130 Q 390 130 395 185"
-        stroke="url(#teal)" stroke-width="48" fill="none" stroke-linecap="round"/>
-  <!-- 하단 텍스트 영역 배경 -->
-  <rect x="0" y="390" width="512" height="122" rx="0" fill="rgba(0,184,169,0.12)"/>
-  <rect x="0" y="388" width="512" height="4" fill="url(#teal)" rx="2"/>
-  <!-- 세방 텍스트 -->
-  <text x="256" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="52" font-weight="900" fill="#00b8a9" letter-spacing="-1">세방(주)</text>
-  <!-- 하불실적관리 텍스트 -->
-  <text x="256" y="490" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="1">하불실적관리</text>
-</svg>`;
+// 웹의 sebang_ci_white.svg 경로에서 직접 읽어 아이콘 생성
+const ciSvgRaw = fs.readFileSync('./sebang_ci_white.svg', 'utf8');
+// SVG를 base64로 인코딩해 img 태그에 사용
+const ciSvgB64 = Buffer.from(ciSvgRaw).toString('base64');
+
+// 아이콘: 네이비 배경 + 세방 CI 로고(흰색) + "실적현황" 텍스트
+const HTML = (size) => `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:${size}px; height:${size}px; overflow:hidden;
+  background: linear-gradient(145deg, #1a2744 0%, #253358 100%);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:${Math.round(size*0.05)}px;
+}
+.ci-wrap {
+  width: ${Math.round(size * 0.72)}px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ci-wrap img { width: 100%; height: auto; }
+.label {
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-size: ${Math.round(size * 0.115)}px;
+  font-weight: 800;
+  color: #00b8a9;
+  letter-spacing: ${Math.round(size * 0.008)}px;
+  white-space: nowrap;
+}
+.line {
+  width: ${Math.round(size * 0.6)}px;
+  height: ${Math.round(size * 0.012)}px;
+  background: linear-gradient(90deg, transparent, #00b8a9, transparent);
+  border-radius: 4px;
+  margin: ${Math.round(size * 0.01)}px 0;
+}
+</style>
+</head><body>
+  <div class="ci-wrap">
+    <img src="data:image/svg+xml;base64,${ciSvgB64}" />
+  </div>
+  <div class="line"></div>
+  <div class="label">실적현황</div>
+</body></html>`;
 
 async function generate() {
   const browser = await puppeteer.launch({
@@ -40,12 +55,10 @@ async function generate() {
   for (const size of [192, 512]) {
     const page = await browser.newPage();
     await page.setViewport({ width: size, height: size, deviceScaleFactor: 1 });
-    const svg = SVG(size);
-    const dataUrl = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
-    await page.goto(dataUrl);
+    await page.setContent(HTML(size), { waitUntil: 'networkidle0' });
     const buf = await page.screenshot({ type: 'png', clip: { x:0, y:0, width:size, height:size } });
     fs.writeFileSync(`icon-${size}.png`, buf);
-    console.log(`icon-${size}.png written (${buf.length} bytes)`);
+    console.log(`icon-${size}.png  ${buf.length} bytes`);
     await page.close();
   }
   await browser.close();

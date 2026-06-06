@@ -822,9 +822,17 @@ td.bold { font-weight: 700; color: var(--navy); }
   .ppopup-box {
     max-width: 100%;
     border-radius: 12px;
-    padding: 14px 14px;
-    max-height: 88vh;
+    padding: 14px 12px;
+    max-height: 90vh;
   }
+  /* 팝업 KPI 카드 — 모바일에서 가로 3분할 */
+  .ppopup-kpi { flex-direction: row !important; gap: 6px !important; }
+  .ppopup-kpi > div { min-width: 0 !important; flex: 1 !important; padding: 7px 8px !important; }
+  .ppopup-kpi .kv { font-size: 13px !important; }
+  .ppopup-kpi .ks { font-size: 9px !important; }
+  /* 팝업 테이블 폰트 축소 */
+  .ppopup-box table { font-size: 11px !important; }
+  .ppopup-box table th, .ppopup-box table td { padding: 5px 5px !important; }
 
   /* 카드 기본 패딩 축소 */
   .card-inner { padding: 12px; }
@@ -2624,21 +2632,21 @@ function openPartnerPopup(name) {
   document.getElementById('partnerPopupSub').textContent =
     `${_dashPeriodLabel} · 고객 ${rows.length}개사`;
   document.getElementById('partnerPopupBody').innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:80px;background:var(--teal-ll);border-radius:8px;padding:8px 12px;">
+    <div class="ppopup-kpi" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:nowrap;">
+      <div style="flex:1;min-width:80px;background:var(--teal-ll);border-radius:8px;padding:8px 10px;">
         <div style="font-size:11px;color:var(--gray500);">매출</div>
-        <div style="font-size:15px;font-weight:800;color:var(--teal-d);">${fmtEok(tRev)}</div>
-        <div style="font-size:10px;color:var(--gray400);margin-top:1px;">${fmt(tRev)}원</div>
+        <div class="kv" style="font-size:15px;font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmtEok(tRev)}</div>
+        <div class="ks" style="font-size:10px;color:var(--gray400);margin-top:1px;white-space:nowrap;">${fmt(tRev)}원</div>
       </div>
-      <div style="flex:1;min-width:80px;background:var(--gold-l);border-radius:8px;padding:8px 12px;">
+      <div style="flex:1;min-width:80px;background:var(--gold-l);border-radius:8px;padding:8px 10px;">
         <div style="font-size:11px;color:var(--gray500);">하불</div>
-        <div style="font-size:15px;font-weight:800;color:var(--gold);">${fmtEok(tCost)}</div>
-        <div style="font-size:10px;color:var(--gray400);margin-top:1px;">${fmt(tCost)}원</div>
+        <div class="kv" style="font-size:15px;font-weight:800;color:var(--gold);white-space:nowrap;">${fmtEok(tCost)}</div>
+        <div class="ks" style="font-size:10px;color:var(--gray400);margin-top:1px;white-space:nowrap;">${fmt(tCost)}원</div>
       </div>
-      <div style="flex:1;min-width:80px;background:var(--green-l);border-radius:8px;padding:8px 12px;">
+      <div style="flex:1;min-width:80px;background:var(--green-l);border-radius:8px;padding:8px 10px;">
         <div style="font-size:11px;color:var(--gray500);">공헌이익</div>
-        <div style="font-size:15px;font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};">${fmtEok(tCi)}</div>
-        <div style="font-size:10px;color:var(--gray400);margin-top:1px;">${ciRate}</div>
+        <div class="kv" style="font-size:15px;font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtEok(tCi)}</div>
+        <div class="ks" style="font-size:10px;color:var(--gray400);margin-top:1px;white-space:nowrap;">${ciRate}</div>
       </div>
     </div>
     <div style="overflow:auto;max-height:48vh;border:1px solid var(--gray200);border-radius:8px;">
