@@ -1698,23 +1698,26 @@ function renderBatchList() {
   if (!batches.length) { el.innerHTML = ''; return; }
   const tags = batches.map(b => {
     const sel = selectedBatchId === b.id;
-    return `
-      <div onclick="toggleBatchFilter('${b.id}')" style="display:inline-flex;align-items:center;gap:6px;
+    return `<div onclick="toggleBatchFilter('${b.id}')"
+      style="display:inline-flex;align-items:center;gap:6px;
         background:${sel?'var(--teal)':'var(--white)'};
         border:1.5px solid ${sel?'var(--teal)':'var(--gray200)'};
-        border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .15s;"
-        title="클릭하면 이 배치만 필터링">
-        <span style="font-weight:700;color:${sel?'#fff':'var(--navy)'};">${b.label}</span>
-        <span style="color:${sel?'rgba(255,255,255,.7)':'var(--gray400)'};">${b.count}건</span>
-        <span style="font-size:11px;color:${sel?'rgba(255,255,255,.85)':'var(--teal)'};font-weight:600;">👤${b.uploader||'?'}</span>
-        ${isAdminUser() ? `<button onclick="event.stopPropagation();deleteBatch('${b.id}')" title="이 배치 전체 삭제"
-          style="border:none;background:${sel?'rgba(255,255,255,.2)':'var(--red-l)'};color:${sel?'#fff':'var(--red)'};
-          border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>` : ''}
-      </div>`;
+        border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .15s;
+        box-shadow:${sel?'0 2px 8px rgba(0,150,136,.3)':'none'};"
+      title="${sel?'다시 클릭하면 필터 해제':'이 배치만 필터링'}">
+      <span style="font-weight:700;color:${sel?'#fff':'var(--navy)'};">${b.label}</span>
+      <span style="color:${sel?'rgba(255,255,255,.75)':'var(--gray400)'};">${b.count}건</span>
+      <span style="font-size:11px;color:${sel?'rgba(255,255,255,.85)':'var(--teal)'};font-weight:600;">👤${b.uploader||'?'}</span>
+      ${isAdminUser() ? `<button onclick="event.stopPropagation();deleteBatch('${b.id}')" title="이 배치 전체 삭제"
+        style="border:none;background:${sel?'rgba(255,255,255,.25)':'var(--red-l)'};color:${sel?'#fff':'var(--red)'};
+        border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;margin-left:2px;">✕ 삭제</button>` : ''}
+    </div>`;
   }).join('');
   const clearBtn = selectedBatchId
-    ? `<button onclick="toggleBatchFilter(null)" style="border:1.5px solid var(--gray200);border-radius:8px;
-        padding:5px 10px;font-size:12px;background:var(--gray100);color:var(--gray500);cursor:pointer;font-weight:700;">✕ 필터 해제</button>`
+    ? `<button onclick="toggleBatchFilter(null)"
+        style="border:1.5px solid var(--teal);border-radius:8px;padding:5px 12px;
+        font-size:12px;background:#fff;color:var(--teal);cursor:pointer;font-weight:700;">
+        ✕ 필터 해제</button>`
     : '';
   el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">${tags}${clearBtn}</div>`;
 }
@@ -1787,13 +1790,12 @@ function renderBatchManager() {
   const fUploader = document.getElementById('bmUploader').value;
   const q         = document.getElementById('bmSrch').value.trim().toLowerCase();
 
-  // 배치별 실데이터 집계 (매출/하불/공헌이익/협력사목록)
+  // 배치별 실데이터 집계 (매출/하불/공헌이익)
   let rows = batches.map(b => {
     const recs = allData.filter(r => r._batchId === b.id);
     const rev  = recs.reduce((s,r)=>s+(+r['매출(원)']||0),0);
     const cost = recs.reduce((s,r)=>s+(+r['하불(원)']||0),0);
-    const partners = [...new Set(recs.map(r=>r['협력사명']).filter(Boolean))];
-    return { ...b, realCount: recs.length, rev, cost, ci: rev-cost, partners };
+    return { ...b, realCount: recs.length, rev, cost, ci: rev-cost };
   });
 
   // 필터
@@ -1803,7 +1805,7 @@ function renderBatchManager() {
     if (fMonth    && String(b.month) !== String(fMonth))     return false;
     if (fUploader && (b.uploader||'') !== fUploader)         return false;
     if (q) {
-      const hay = [b.label, b.uploader||'', ...b.partners].join(' ').toLowerCase();
+      const hay = [b.label, b.uploader||''].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -1818,20 +1820,15 @@ function renderBatchManager() {
     <th style="text-align:right">건수</th>
     <th style="text-align:right">매출</th><th style="text-align:right">하불</th>
     <th style="text-align:right">공헌이익</th>
-    <th>포함 협력사</th>
     <th style="text-align:center">관리</th>
   </tr>`;
 
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 배치 없음</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 배치 없음</td></tr>`;
     return;
   }
 
-  tb.innerHTML = rows.map(b => {
-    const partnerTags = b.partners.slice(0,4).map(p=>
-      `<span style="font-size:10px;background:var(--gray100);border-radius:4px;padding:1px 5px;margin:1px;">${p}</span>`
-    ).join('') + (b.partners.length>4 ? `<span style="font-size:10px;color:var(--gray400);"> +${b.partners.length-4}</span>` : '');
-    return `<tr>
+  tb.innerHTML = rows.map(b => `<tr>
     <td><span class="badge ${bc(b.branch)}">${(b.branch||'—').replace('지사','')}</span></td>
     <td class="bold">${b.year}년 ${b.month}월</td>
     <td style="font-size:11.5px;color:var(--teal);font-weight:700;">👤${b.uploader||'?'}<br><span style="color:var(--gray300);font-weight:400;font-size:10px;">${b.ts||''}</span></td>
@@ -1839,15 +1836,13 @@ function renderBatchManager() {
     <td class="num">${fmt(b.rev)}</td>
     <td class="num" style="font-weight:700;">${fmt(b.cost)}</td>
     <td class="num" style="color:var(--green);">${fmt(b.ci)}</td>
-    <td style="max-width:160px;line-height:1.8;">${partnerTags||'—'}</td>
     <td style="text-align:center;white-space:nowrap;">
       <button onclick="viewBatchInTable('${b.id}')" style="border:none;background:var(--teal-l);color:var(--teal);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;margin-right:4px;">📋 확인</button>
       ${isAdminUser()
         ? `<button onclick="deleteBatch('${b.id}')" style="border:none;background:var(--red-l);color:var(--red);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>`
-        : `<span style="color:var(--gray300);font-size:11px;">—</span>`}
+        : ''}
     </td>
-  </tr>`;
-  }).join('');
+  </tr>`).join('');
 }
 
 // 배치 → 전체데이터 화면으로 이동해서 해당 배치만 필터링
