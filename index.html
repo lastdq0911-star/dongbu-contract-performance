@@ -597,19 +597,20 @@ td.bold { font-weight: 700; color: var(--navy); }
 .leg-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
 /* ══ PARTNER LIST ════════════════════════════════════ */
-.rank-list { display: flex; flex-direction: column; flex-shrink: 0; }
+.rank-list { display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
 .rank-row  {
-  display: flex; align-items: center; gap: 10px;
-  padding: 4px 0; border-bottom: 1px solid var(--gray100);
+  display: flex; align-items: center; gap: 7px;
+  padding: 3px 0; border-bottom: 1px solid var(--gray100);
+  flex: 1;
 }
 .rank-row:last-child { border-bottom: none; }
-.rank-no { font-size: 11px; font-weight: 800; color: var(--gray300); min-width: 18px; text-align: center; }
+.rank-no { font-size: 11px; font-weight: 800; color: var(--gray300); min-width: 16px; text-align: center; flex-shrink: 0; }
 .rank-no.top { color: var(--teal); }
-.rank-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rank-branch { font-size: 10.5px; color: var(--gray400); }
-.rank-bar-wrap { width: 64px; height: 4px; background: var(--gray100); border-radius: 2px; overflow: hidden; }
+.rank-name { font-size: 12px; font-weight: 700; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-branch { font-size: 10px; color: var(--gray400); }
+.rank-bar-wrap { width: 48px; height: 3px; background: var(--gray100); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
 .rank-bar { height: 100%; border-radius: 2px; background: var(--teal); }
-.rank-val { font-size: 12px; font-weight: 800; color: var(--navy); font-family: 'DM Mono'; text-align: right; min-width: 60px; }
+.rank-val { font-size: 11px; font-weight: 800; color: var(--navy); font-family: 'DM Mono'; text-align: right; min-width: 54px; flex-shrink: 0; }
 
 /* ══ EMPTY ════════════════════════════════════════════ */
 .empty { text-align: center; padding: 40px 20px; }
@@ -676,8 +677,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 .cat-chart > div { padding: 4px 0 !important; }
 /* TOP10 협력사 카드 */
 .rank-card { display: flex; flex-direction: column; min-height: 0; }
-.rank-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; }
-.rank-list { flex: 1; overflow-y: auto; }
+.rank-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; overflow: hidden; }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -821,9 +821,21 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="dash-left">
         <div class="card dash-chart-card">
           <div class="card-inner">
-            <div class="section-label">
-              <div style="font-size:14px;">📊</div>
-              <h3>월별 실적 추이</h3>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;margin-bottom:8px;">
+              <div class="section-label" style="margin:0;">
+                <div style="font-size:14px;">📊</div>
+                <h3>월별 실적 추이</h3>
+              </div>
+              <select id="chartCatFilter" onchange="renderDash()" style="font-size:11px;border:1px solid var(--gray200);border-radius:6px;padding:3px 6px;color:var(--navy);background:#fff;cursor:pointer;">
+                <option value="">전체 용역</option>
+                <option value="컨테이너운송">컨테이너운송</option>
+                <option value="벌크운송">벌크운송</option>
+                <option value="도급">도급</option>
+                <option value="장비임대">장비임대</option>
+                <option value="하역">하역</option>
+                <option value="보관">보관</option>
+                <option value="기타">기타</option>
+              </select>
             </div>
             <div class="chart-wrap">
               <div class="chart-cols" id="monthChart">
@@ -1851,7 +1863,9 @@ function renderDash() {
   document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
   document.getElementById('kCntS').textContent  = '협력사 ' + pnrs.length + '개사';
 
-  renderMonthChart(data, lo, hi);
+  const catF = (document.getElementById('chartCatFilter')||{}).value || '';
+  const chartData = catF ? data.filter(r=>r['용역구분']===catF) : data;
+  renderMonthChart(chartData, lo, hi);
   renderTopPartners(data);
   renderCatChart(data);
 }
