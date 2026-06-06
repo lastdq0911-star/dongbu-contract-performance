@@ -1373,6 +1373,7 @@ const BCOLORS = ['var(--teal)','var(--green)','var(--gold)','#8b5cf6'];
 
 let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
+let _periodInited = false;  // 기간 셀렉트 최초 초기화 여부
 let pendingRows = [];
 let previewShowAll = false;
 let partnerExpanded = {};
@@ -1818,15 +1819,37 @@ function populateYearSelects(){
   batches.forEach(b=>{ if(b.year){ ys.add(+b.year); dataYears.add(+b.year); } });
   const years = [...ys].filter(Boolean).sort((a,b)=>b-a);
   const yOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  // 기본값: 데이터가 있는 최신 연도(없으면 목록 최신)
-  const latest = dataYears.size ? Math.max(...dataYears) : years[0];
-  // 기간 시작/끝 연도 셀렉트 (기본값 = 최신연도)
-  ['dashY1','dashY2','pY1','pY2','cY1','cY2','fY1','fY2'].forEach(id=>{
-    const el=document.getElementById(id); if(!el) return;
-    const cur=el.value;
-    el.innerHTML=yOpts;
-    el.value = (cur && years.includes(+cur)) ? cur : String(latest);
-  });
+  // 현재 연월 (기본 기간 = 해당월)
+  const now = new Date();
+  const curY = String(now.getFullYear());
+  const curM = String(now.getMonth() + 1);
+
+  // 각 기간 셀렉트: 아직 값이 없을 때(초기화)만 해당월로 세팅, 이미 값 있으면 유지
+  const setYearSel = (id, defaultVal) => {
+    const el = document.getElementById(id); if (!el) return;
+    const prev = el.value;
+    el.innerHTML = yOpts;
+    el.value = (prev && years.includes(+prev)) ? prev : defaultVal;
+  };
+  const setMonthSel = (id, defaultVal) => {
+    const el = document.getElementById(id); if (!el) return;
+    // 최초 1회(초기화 전)만 해당월로 세팅, 이후엔 사용자 값 유지
+    if (!_periodInited) el.value = defaultVal;
+  };
+
+  // 대시보드: 해당월~해당월
+  setYearSel('dashY1', curY); setYearSel('dashY2', curY);
+  setMonthSel('dashM1', curM); setMonthSel('dashM2', curM);
+  // 협력사별: 해당월~해당월
+  setYearSel('pY1', curY); setYearSel('pY2', curY);
+  setMonthSel('pM1', curM); setMonthSel('pM2', curM);
+  // 고객별: 해당월~해당월
+  setYearSel('cY1', curY); setYearSel('cY2', curY);
+  setMonthSel('cM1', curM); setMonthSel('cM2', curM);
+  // 전체데이터: 해당월~해당월
+  setYearSel('fY1', curY); setYearSel('fY2', curY);
+  setMonthSel('fM1', curM); setMonthSel('fM2', curM);
+  _periodInited = true;
   // 배치관리 연도 (전체 옵션 포함)
   const bm=document.getElementById('bmYear');
   if(bm){ const cur=bm.value; bm.innerHTML='<option value="">전체</option>'+yOpts; bm.value=cur; }
