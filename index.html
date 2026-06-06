@@ -1942,13 +1942,13 @@ function renderDash() {
   const ci   = rev-cost;
   const pnrs = [...new Set(data.map(r=>r['협력사명']).filter(Boolean))];
 
-  document.getElementById('kRev').textContent   = fmtB(rev);
-  document.getElementById('kCost').textContent  = fmtB(cost);
-  document.getElementById('kCI').textContent    = fmtB(ci);
+  document.getElementById('kRev').textContent   = fmtEok(rev);
+  document.getElementById('kCost').textContent  = fmtEok(cost);
+  document.getElementById('kCI').textContent    = fmtEok(ci);
   document.getElementById('kCnt').textContent   = pnrs.length;
   document.getElementById('kRevS').textContent  = fmt(rev)+'원';
   document.getElementById('kCostS').textContent = fmt(cost)+'원';
-  document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
+  document.getElementById('kCIS').textContent   = fmt(ci)+'원 ('+pct(ci,rev)+')';
   document.getElementById('kCntS').textContent  = '협력사 ' + pnrs.length + '개사';
 
   const catF = (document.getElementById('chartCatFilter')||{}).value || '';
@@ -2022,19 +2022,21 @@ function renderMonthChart(data, lo, hi) {
         rects += `<rect x="${gx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh.toFixed(1)}"
           fill="${COLORS[metric]}" rx="2" opacity="${metric==='rev'?0.5:1}"/>`;
         // 금액 레이블 (매출·하불·공헌이익 모두 '억' 단위로 통일)
-        if (bh > 16) {
+        const rate = (metric==='ci' && d.rev>0) ? (d.ci/d.rev*100).toFixed(1)+'%' : null;
+        if (bh > 28 && rate) {
+          // 막대 안에 금액(위) + 이익률(아래) 두 줄
+          labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2-2).toFixed(1)}" text-anchor="middle"
+            font-size="7.5" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${fmtEok(val)}</text>`;
+          labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+9).toFixed(1)}" text-anchor="middle"
+            font-size="7" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${rate}</text>`;
+        } else if (bh > 16) {
           labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+3).toFixed(1)}" text-anchor="middle"
             font-size="7.5" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${fmtEok(val)}</text>`;
+          if (rate) labels += `<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle"
+            font-size="7" fill="${COLORS['ci']}" font-weight="700" font-family="DM Mono,monospace">${rate}</text>`;
         } else {
           labels += `<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle"
-            font-size="7" fill="${COLORS[metric]}" font-weight="700" font-family="DM Mono,monospace">${fmtEok(val)}</text>`;
-        }
-        // 공헌이익률은 막대 '아래쪽'(바닥 밑)에 별도 표시
-        if (metric==='ci' && d.rev>0) {
-          const rate = (d.ci/d.rev*100).toFixed(1)+'%';
-          const baseY = padT + cH; // 막대 바닥(x축 기준선)
-          labels += `<text x="${cx.toFixed(1)}" y="${(baseY+9).toFixed(1)}" text-anchor="middle"
-            font-size="7" fill="${COLORS['ci']}" font-weight="700" font-family="DM Mono,monospace">${rate}</text>`;
+            font-size="7" fill="${COLORS[metric]}" font-weight="700" font-family="DM Mono,monospace">${fmtEok(val)}${rate?' '+rate:''}</text>`;
         }
       }
     });
