@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="하불실적관리">
@@ -1234,7 +1234,7 @@ td.bold { font-weight: 700; color: var(--navy); }
           <thead id="tblHead">
             <tr>
               <th><div class="th-inner">지사<button class="col-filter-btn" onclick="openColFilter(event,'지사')">▾</button></div></th>
-              <th><div class="th-inner">연/월<button class="col-sort-btn" onclick="setSort('연월',this)">↕</button></div></th>
+              <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">연/월<button class="col-sort-btn" onclick="setSort('연월',this)">↕</button></div></th>
               <th><div class="th-inner">협력사명<button class="col-filter-btn" onclick="openColFilter(event,'협력사명')">▾</button><button class="col-sort-btn" onclick="setSort('협력사명',this)">↕</button></div></th>
               <th><div class="th-inner">고객(화주)<button class="col-filter-btn" onclick="openColFilter(event,'고객(화주)')">▾</button><button class="col-sort-btn" onclick="setSort('고객(화주)',this)">↕</button></div></th>
               <th><div class="th-inner">용역<button class="col-filter-btn" onclick="openColFilter(event,'용역구분')">▾</button></div></th>
@@ -2649,7 +2649,7 @@ function renderTable() {
   </tr>`;
   tb.innerHTML = totalRow + shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
-    <td class="mono">${r['연도']||''}/${r['월']||''}</td>
+    <td class="mono" style="text-align:right">${r['연도']||''}/${r['월']||''}</td>
     <td class="bold" style="overflow:hidden;text-overflow:ellipsis;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
     <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
     <td><span class="badge ${bc(r['용역구분'])}">${r['용역구분']||'—'}</span></td>
