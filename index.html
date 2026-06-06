@@ -661,24 +661,22 @@ td.bold { font-weight: 700; color: var(--navy); }
 .dash-kpi .kpi-val { font-size: 18px; }
 .dash-kpi .kpi-label { margin-bottom: 2px; font-size: 11px; }
 .dash-kpi .kpi-sub  { font-size: 10px; }
-/* 좌측 차트 + 우측 패널 — 남은 높이를 꽉 채우되 페이지 스크롤은 없음 */
-.dash-main { display: grid; grid-template-columns: 1fr 340px; gap: 10px; flex: 1; min-height: 0; }
-/* 좌측: 월별차트(가변) + 용역구분(고정) 세로 배치 */
-.dash-left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-.dash-chart-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* 3-컬럼 대시보드: 월별차트(가변) | TOP10협력사 | 용역구분 */
+.dash-main { display: grid; grid-template-columns: 1fr 260px 185px; gap: 10px; flex: 1; min-height: 0; }
+.dash-chart-card { display: flex; flex-direction: column; min-height: 0; }
 .dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
 .dash-chart-card .section-label { margin-bottom: 8px; flex-shrink: 0; }
-.dash-chart-card .chart-wrap { min-height: 0; margin: auto 0; }
-/* 용역구분 카드: 자연 높이 유지(잘림 방지) */
-.cat-card { flex-shrink: 0; }
-.cat-card .card-inner { padding: 9px 14px; }
-.cat-card .section-label { margin-bottom: 4px; }
+.dash-chart-card .chart-wrap { flex: 1; min-height: 0; }
+/* TOP10 협력사 카드 */
+.rank-card { display: flex; flex-direction: column; min-height: 0; }
+.rank-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; }
+.rank-list { flex: 1; overflow-y: auto; }
+/* 용역구분 카드 */
+.cat-card { display: flex; flex-direction: column; min-height: 0; }
+.cat-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 9px 12px; }
+.cat-card .section-label { margin-bottom: 4px; flex-shrink: 0; }
+.cat-chart { flex: 1; overflow-y: auto; }
 .cat-chart > div { padding: 4px 0 !important; }
-/* 우측 패널: 지사별 + TOP5 (둘 다 자연 높이) */
-.dash-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-.dash-right > .card { flex-shrink: 0; }
-.dash-right .card-inner { padding: 10px 12px; }
-.dash-right .section-label { margin-bottom: 6px; }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -810,78 +808,55 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="kpi-val" id="kCI">—</div>
         <div class="kpi-sub" id="kCIS">이익률 —</div>
       </div>
-      <div class="kpi-box navy">
-        <div class="kpi-label">협력사 수</div>
-        <div class="kpi-val" id="kCnt">—</div>
-        <div class="kpi-sub" id="kCntS">전체 0건</div>
-      </div>
     </div>
 
-    <!-- Main Grid -->
+    <!-- Main Grid: 월별 추이(축소) | 하불 상위 TOP10 | 용역구분별 비중 -->
     <div class="dash-main">
-      <!-- Left: 월별 차트 + 용역구분 -->
-      <div class="dash-left">
-        <div class="card dash-chart-card">
-          <div class="card-inner">
-            <div class="section-label">
-              <div style="font-size:14px;">📊</div>
-              <h3>월별 실적 추이</h3>
-            </div>
-            <div class="chart-wrap">
-              <div class="chart-cols" id="monthChart">
-                <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
-              </div>
-            </div>
-            <div class="chart-legend">
-              <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
-              <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
-              <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
+      <!-- 월별 차트 -->
+      <div class="card dash-chart-card">
+        <div class="card-inner">
+          <div class="section-label">
+            <div style="font-size:14px;">📊</div>
+            <h3>월별 실적 추이</h3>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-cols" id="monthChart">
+              <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
             </div>
           </div>
-        </div>
-
-        <!-- 용역구분 (차트 아래) -->
-        <div class="card cat-card">
-          <div class="card-inner">
-            <div class="section-label">
-              <div style="font-size:13px;">📦</div>
-              <h3>용역구분별 비중</h3>
-            </div>
-            <div id="catChart" class="cat-chart">
-              <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
-            </div>
+          <div class="chart-legend">
+            <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
+            <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
+            <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
           </div>
         </div>
       </div>
 
-      <!-- Right panel -->
-      <div class="dash-right">
-        <!-- 지사별 달성률 -->
-        <div class="card">
-          <div class="card-inner">
-            <div class="section-label">
-              <div style="font-size:13px;">🏗</div>
-              <h3>지사별 공헌이익 누계</h3>
+      <!-- 하불 상위 협력사 TOP10 -->
+      <div class="card rank-card">
+        <div class="card-inner">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="section-label" style="margin:0;">
+              <div style="font-size:13px;">🏢</div>
+              <h3>하불 상위 협력사</h3>
             </div>
-            <div class="branch-kpi" id="branchKpi">
-              <div class="empty"><div class="ei">📍</div><p>데이터 없음</p></div>
-            </div>
+            <span class="badge b-teal">TOP 10</span>
+          </div>
+          <div class="rank-list" id="topPartners">
+            <div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>
           </div>
         </div>
+      </div>
 
-        <!-- 하불 상위 협력사 -->
-        <div class="card">
-          <div class="card-inner">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <div class="section-label" style="margin:0;">
-                <div style="font-size:13px;">🏢</div>
-                <h3>하불 상위 협력사</h3>
-              </div>
-              <span class="badge b-teal">TOP 5</span>
-            </div>
-            <div class="rank-list" id="topPartners">
-              <div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>
-            </div>
+      <!-- 용역구분별 비중 -->
+      <div class="card cat-card">
+        <div class="card-inner">
+          <div class="section-label">
+            <div style="font-size:13px;">📦</div>
+            <h3>용역구분별 비중</h3>
+          </div>
+          <div id="catChart" class="cat-chart">
+            <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
           </div>
         </div>
       </div>
@@ -1079,17 +1054,21 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option>경북지사</option><option>강원지사</option>
       </select>
       <div class="fsep"></div>
-      <label>연도</label>
-      <select class="fsel" id="fYear">
-        <option value="">전체</option><option>2026</option><option>2025</option><option>2024</option>
+      <label>기간</label>
+      <select class="fsel" id="fY1"></select>
+      <select class="fsel" id="fM1">
+        <option value="1" selected>1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+        <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
-      <label>월</label>
-      <select class="fsel" id="fMonth">
-        <option value="">전체</option>
-        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-        <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-        <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+      <span style="color:var(--gray400);font-weight:700;">~</span>
+      <select class="fsel" id="fY2"></select>
+      <select class="fsel" id="fM2">
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+        <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12" selected>12월</option>
       </select>
       <div class="fsep"></div>
       <label>고객</label>
@@ -1824,7 +1803,7 @@ function populateYearSelects(){
   // 기본값: 데이터가 있는 최신 연도(없으면 목록 최신)
   const latest = dataYears.size ? Math.max(...dataYears) : years[0];
   // 기간 시작/끝 연도 셀렉트 (기본값 = 최신연도)
-  ['dashY1','dashY2','pY1','pY2','cY1','cY2'].forEach(id=>{
+  ['dashY1','dashY2','pY1','pY2','cY1','cY2','fY1','fY2'].forEach(id=>{
     const el=document.getElementById(id); if(!el) return;
     const cur=el.value;
     el.innerHTML=yOpts;
@@ -1861,14 +1840,11 @@ function renderDash() {
   document.getElementById('kRev').textContent   = fmtB(rev);
   document.getElementById('kCost').textContent  = fmtB(cost);
   document.getElementById('kCI').textContent    = fmtB(ci);
-  document.getElementById('kCnt').textContent   = pnrs.length;
   document.getElementById('kRevS').textContent  = fmt(rev)+'원';
   document.getElementById('kCostS').textContent = fmt(cost)+'원';
   document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
-  document.getElementById('kCntS').textContent  = '협력사 ' + pnrs.length + '개사';
 
   renderMonthChart(data, lo, hi);
-  renderBranchKpi(data);
   renderTopPartners(data);
   renderCatChart(data);
 }
@@ -1897,20 +1873,23 @@ function renderMonthChart(data, lo, hi) {
     const hasData = d.rev > 0 || d.cost > 0;
     const rRev  = ratio(d.rev);
     const spacer = 1000 - rRev;
-    const topNum = hasData ? fmtB(d.rev) : '';
     const rCost = d.cost > 0 ? Math.max(Math.round((d.cost/maxV)*1000), 10) : 0;
     const rCi   = d.ci   > 0 ? Math.max(Math.round((d.ci  /maxV)*1000), 10) : 0;
     const lbl = multiYear ? `${String(d.y).slice(2)}.${d.m}` : `${d.m}월`;
-    const tipPfx = `${d.y}년 ${d.m}월`;
+    // visible segment labels: show value inside each colored segment
+    const mkSeg = (val, flex, bg, opacity='') =>
+      val > 0 ? `<div class="bar-seg" style="flex:${flex};background:${bg};${opacity?'opacity:'+opacity+';':''}position:relative;overflow:visible;">
+        <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none;">${fmtB(val)}</span>
+      </div>` : '';
     return `
     <div class="bar-col${!hasData?' no-data':''}">
-      <div class="bar-num">${topNum?`<span>${topNum}</span>`:''}</div>
+      <div class="bar-num"></div>
       <div class="bar-area">
         <div class="bar-spacer" style="flex:${Math.max(spacer,0)}"></div>
         <div class="bar-stack" style="flex:${rRev}">
-          ${d.rev>0?`<div class="bar-seg" style="flex:${rRev};background:var(--teal);opacity:.35;" data-tip="${tipPfx} 매출: ${fmtB(d.rev)}"></div>`:''}
-          ${d.cost>0?`<div class="bar-seg" style="flex:${rCost};background:var(--gold);" data-tip="${tipPfx} 하불: ${fmtB(d.cost)}"></div>`:''}
-          ${d.ci>0?`<div class="bar-seg" style="flex:${rCi};background:var(--green);" data-tip="${tipPfx} 공헌이익: ${fmtB(d.ci)}"></div>`:''}
+          ${mkSeg(d.rev, rRev, 'var(--teal)', '.4')}
+          ${mkSeg(d.cost, rCost, 'var(--gold)')}
+          ${mkSeg(d.ci, rCi, 'var(--green)')}
         </div>
       </div>
       <div class="bar-lbl">${lbl}</div>
@@ -1947,7 +1926,7 @@ function renderTopPartners(data) {
     if(!byP[p]) byP[p]={cost:0,branch:r['지사']||''};
     byP[p].cost+=(+r['하불(원)']||0);
   });
-  const top=Object.entries(byP).sort((a,b)=>b[1].cost-a[1].cost).slice(0,5);
+  const top=Object.entries(byP).sort((a,b)=>b[1].cost-a[1].cost).slice(0,10);
   if(!top.length){el.innerHTML='<div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>';return;}
   const maxC=top[0][1].cost||1;
   el.innerHTML=top.map(([name,{cost,branch}],i)=>`
@@ -2053,9 +2032,13 @@ function doTableSearch() {
 }
 
 function resetTableFilters() {
-  ['fBranch','fYear','fMonth','fClient','fPartner','fUploader'].forEach(id=>{
+  ['fBranch','fClient','fPartner','fUploader'].forEach(id=>{
     document.getElementById(id).value='';
   });
+  // 기간은 데이터 최신연도 1~12월로 복원
+  populateYearSelects();
+  document.getElementById('fM1').value='1';
+  document.getElementById('fM2').value='12';
   document.getElementById('srch').value='';
   colFilters = {};
   sortField  = ''; sortDir = '';
@@ -2153,18 +2136,18 @@ function renderTable() {
     return;
   }
 
-  const year2    = document.getElementById('fYear').value;
+  const y1=document.getElementById('fY1').value, m1=document.getElementById('fM1').value;
+  const y2=document.getElementById('fY2').value, m2=document.getElementById('fM2').value;
+  const {lo,hi}= (y1&&y2) ? periodBounds(y1,m1,y2,m2) : {lo:-Infinity,hi:Infinity};
   const branch2  = document.getElementById('fBranch').value;
-  const month2   = document.getElementById('fMonth').value;
   const client2  = document.getElementById('fClient').value;
   const partner2 = document.getElementById('fPartner').value;
   const uploader2= document.getElementById('fUploader').value;
   const q2       = document.getElementById('srch').value.trim();
   filteredIndices = [];
   allData.forEach((r,idx)=>{
-    if(year2     && String(r['연도'])!==String(year2))  return;
+    if(!inPeriod(r,lo,hi))                              return;
     if(branch2   && r['지사']!==branch2)                return;
-    if(month2    && String(r['월'])!==String(month2))   return;
     if(client2   && r['고객(화주)']!==client2)          return;
     if(partner2  && r['협력사명']!==partner2)           return;
     if(uploader2 && r['_uploader']!==uploader2)         return;
@@ -2934,30 +2917,24 @@ function deleteByFilter(){
   requireAdmin(_doDeleteByFilter);
 }
 async function _doDeleteByFilter(){
-  const branch = document.getElementById('fBranch').value;
-  const year   = document.getElementById('fYear').value;
-  const month  = document.getElementById('fMonth').value;
-  if(!year && !month && !branch){
-    toast('⚠ 필터를 먼저 설정하세요 (지사/연도/월 중 하나 이상)');
-    return;
-  }
-  const target = fd(allData,{year,branch,month});
-  if(!target.length){ toast('삭제할 데이터 없음'); return; }
-  if(!confirm(`필터 조건의 ${target.length}건을 모두 삭제하시겠습니까?\n(${branch||'전체'} ${year||''}년 ${month||''}월)`)) return;
+  if(!tableSearched){ toast('⚠ 먼저 조회하세요 — 현재 조회된 데이터가 삭제됩니다'); return; }
+  // 현재 조회(필터)된 행들을 삭제 대상으로 (기간·지사·고객·협력사 등 모든 조건 반영)
+  const target = filteredIndices.map(i=>allData[i]);
+  const ids = target.map(r=>r._id).filter(Boolean);
+  if(!ids.length){ toast('삭제할 데이터 없음'); return; }
+  if(!confirm(`현재 조회된 ${ids.length}건을 모두 삭제하시겠습니까?\n(삭제 후 되돌릴 수 없습니다)`)) return;
   try {
-    let q = _sb.from('performance_records').delete();
-    if (year)   q = q.eq('year',   +year);
-    if (branch) q = q.eq('branch', branch);
-    if (month)  q = q.eq('month',  +month);
-    // 조건이 매출 0 행도 포함하도록 보장: 최소 하나의 필터가 있으므로 안전
-    const res = await q.select('id');
-    if (res.error) throw res.error;
-    const delIds = new Set((res.data||[]).map(x=>x.id));
-    allData = allData.filter(r => !delIds.has(r._id));
-    // 배치 카운트 재계산
+    // 500개씩 나눠서 id 기준 삭제
+    for(let i=0;i<ids.length;i+=500){
+      const chunk=ids.slice(i,i+500);
+      const res = await _sb.from('performance_records').delete().in('id', chunk);
+      if (res.error) throw res.error;
+    }
+    const delSet = new Set(ids);
+    allData = allData.filter(r => !delSet.has(r._id));
     batches.forEach(b => { b.count = allData.filter(r=>r._batchId===b.id).length; });
-    upBadge(); renderTable(); renderDash();
-    toast(`${target.length}건 삭제 완료`);
+    upBadge(); doTableSearch(); renderDash();
+    toast(`${ids.length}건 삭제 완료`);
   } catch(e) {
     toast('⚠ 삭제 실패: '+(e.message||e));
   }
