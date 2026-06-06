@@ -466,6 +466,19 @@ td.bold { font-weight: 700; color: var(--navy); }
 .col-filter-btn.active { background: var(--teal); color: #fff; }
 .col-sort-btn.asc  { background: var(--gold); color: #fff; }
 .col-sort-btn.desc { background: #f97316; color: #fff; }
+.resize-handle {
+  position: absolute; right: 0; top: 0; width: 6px; height: 100%;
+  cursor: col-resize; z-index: 2; user-select: none;
+}
+.resize-handle:hover { background: rgba(0,184,169,.35); }
+.col-vis-popup {
+  position: absolute; z-index: 8000; background: var(--white);
+  border: 1.5px solid var(--gray200); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg); padding: 10px; min-width: 160px;
+  display: none; flex-direction: column; gap: 4px;
+}
+.col-vis-popup.show { display: flex; }
+.col-vis-item { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; padding: 3px 0; }
 .col-filter-popup {
   position: absolute; z-index: 9000;
   background: var(--white); border: 1.5px solid var(--gray200);
@@ -1270,6 +1283,7 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">협력사별 실적</div>
         <div class="page-sub" id="partnerSub">월별 하불 현황</div>
       </div>
+      <button class="btn btn-sm" onclick="openColVisPopup(event,'partner')">📋 열 숨기기</button>
       <button class="btn btn-sm" onclick="exportExcel('partner')">⬇ 내보내기</button>
     </div>
     <div class="filter-row">
@@ -1327,6 +1341,7 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">고객별 실적</div>
         <div class="page-sub" id="clientSub">화주·고객 단위 월별 현황</div>
       </div>
+      <button class="btn btn-sm" onclick="openColVisPopup(event,'client')">📋 열 숨기기</button>
       <button class="btn btn-sm" onclick="exportExcel('client')">⬇ 내보내기</button>
     </div>
     <div class="filter-row">
@@ -1441,6 +1456,9 @@ td.bold { font-weight: 700; color: var(--navy); }
   </div>
 </div>
 
+<!-- ══ 열 숨기기 팝업 ════════════════════════════════════ -->
+<div class="col-vis-popup" id="colVisPopup"></div>
+
 <!-- ══ LOGIN MODAL ══════════════════════════════════════ -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal-box">
@@ -1525,6 +1543,12 @@ let partnerSort = { field:'cost', dir:'desc' };
 let clientSort  = { field:'cost', dir:'desc' };
 let partnerViewMode = 'monthly'; // 'monthly' | 'cumul'
 let clientViewMode  = 'monthly';
+let pColFilters = {};   // 협력사별 컬럼 필터
+let cColFilters = {};   // 고객별 컬럼 필터
+let partnerHiddenCols = new Set(); // 숨긴 컬럼 ('branch','clients','rate'...)
+let clientHiddenCols  = new Set();
+let _pRows = [];  // renderPartner 캐시 (컬럼필터 팝업용)
+let _cRows = [];  // renderClient 캐시
 function sortPartnerBy(field){
   if(partnerSort.field===field) partnerSort.dir = partnerSort.dir==='asc'?'desc':'asc';
   else partnerSort = {field, dir: (field==='name'||field==='branch')?'asc':'desc'};
@@ -1556,6 +1580,7 @@ function resetPartnerFilters(){
   document.getElementById('pSrch').value = '';
   partnerSort = {field:'cost', dir:'desc'};
   partnerExpanded = {};
+  pColFilters = {};
   renderPartner();
 }
 function resetClientFilters(){
@@ -1566,8 +1591,77 @@ function resetClientFilters(){
   document.getElementById('cM2').value = '';
   document.getElementById('cSrch').value = '';
   clientSort = {field:'cost', dir:'desc'};
+  cColFilters = {};
   renderClient();
 }
+
+// ── 컬럼 리사이즈 ─────────────────────────────────────────
+function startColResize(e, th) {
+  e.preventDefault(); e.stopPropagation();
+  const startX = e.clientX;
+  const startW = th.offsetWidth;
+  const onMove = ev => {
+    const w = Math.max(40, startW + ev.clientX - startX);
+    th.style.width = w + 'px'; th.style.minWidth = w + 'px';
+  };
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// ── 열 숨기기 팝업 ───────────────────────────────────────
+const P_COL_DEFS = [
+  {key:'name',   label:'협력사명'},
+  {key:'branch', label:'지사'},
+  {key:'cost',   label:'누계(하불)'},
+  {key:'rate',   label:'이익률'},
+  {key:'clients',label:'고객수'},
+];
+const C_COL_DEFS = [
+  {key:'client', label:'고객(화주)'},
+  {key:'partner',label:'협력사명'},
+  {key:'branch', label:'지사'},
+  {key:'cost',   label:'누계(하불)'},
+  {key:'rate',   label:'이익률'},
+  {key:'cnt',    label:'건수'},
+];
+let _colVisTarget = 'partner';
+
+function openColVisPopup(event, target) {
+  event.stopPropagation();
+  _colVisTarget = target;
+  const popup = document.getElementById('colVisPopup');
+  const defs = target === 'partner' ? P_COL_DEFS : C_COL_DEFS;
+  const hiddenSet = target === 'partner' ? partnerHiddenCols : clientHiddenCols;
+  popup.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--gray400);margin-bottom:6px;">열 표시/숨기기</div>`
+    + defs.map(d => `<label class="col-vis-item">
+        <input type="checkbox" ${hiddenSet.has(d.key)?'':'checked'} onchange="toggleColVis('${d.key}',this.checked)">
+        <span>${d.label}</span>
+      </label>`).join('')
+    + `<hr style="border:none;border-top:1px solid var(--gray100);margin:6px 0;">
+       <div style="font-size:11px;color:var(--gray400);">월별 컬럼은 개별 숨기기 지원 예정</div>`;
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  popup.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+  popup.style.left = Math.max(8, rect.right + window.scrollX - 170) + 'px';
+  popup.classList.toggle('show');
+}
+
+function toggleColVis(colKey, visible) {
+  const hiddenSet = _colVisTarget === 'partner' ? partnerHiddenCols : clientHiddenCols;
+  if (visible) hiddenSet.delete(colKey); else hiddenSet.add(colKey);
+  if (_colVisTarget === 'partner') renderPartner(); else renderClient();
+}
+
+document.addEventListener('click', e => {
+  const popup = document.getElementById('colVisPopup');
+  if (popup && !popup.contains(e.target) && !e.target.closest('[onclick*="openColVisPopup"]')) {
+    popup.classList.remove('show');
+  }
+});
 // 정렬 화살표 표시
 function sortArrow(state, field){
   if(state.field!==field) return '<span style="opacity:.25;">↕</span>';
@@ -2565,8 +2659,8 @@ function resetTableFilters() {
   colFilters    = {};
   sortField     = ''; sortDir = '';
   selectedBatchId = null;
-  document.querySelectorAll('.col-sort-btn').forEach(b=>b.classList.remove('asc','desc'));
-  tableSearched  = true;  // 초기화 후 전체 데이터 바로 표시
+  document.querySelectorAll('.col-sort-btn:not(.bm-sort-btn)').forEach(b=>b.classList.remove('asc','desc'));
+  tableSearched  = false;  // 초기화 후 빈 상태 (조회 버튼으로 확인)
   tableShowAll   = false;
   renderTable();
 }
@@ -2764,7 +2858,7 @@ function renderPartner() {
     return true;
   });
 
-  const span = monthSpan(lo,hi);           // [{y,m}...]
+  const span = monthSpan(lo,hi);
   const multiYear = span.length>0 && span[0].y!==span[span.length-1].y;
   const colKey = s => `${s.y}-${s.m}`;
   const rowKey = r => `${+r['연도']}-${+r['월']}`;
@@ -2772,12 +2866,9 @@ function renderPartner() {
   const showMonths = partnerViewMode !== 'cumul';
   const useMan = showMonths && span.length > 6;
   const fmtM = v => useMan ? fmtMan(v) : fmt(v);
-  const totalCols = 2 + (showMonths ? span.length : 0) + 2;
-  const unitNote = useMan ? ' (만원)' : '';
+  // 숨김 컬럼 헬퍼
+  const pH = col => !partnerHiddenCols.has(col);
 
-  // ── 협력사별 (헤더 클릭 시 정렬) ──
-  const pTh=(label,field,align)=>`<th style="text-align:${align||'left'};cursor:pointer;white-space:nowrap;" onclick="sortPartnerBy('${field}')">${label} ${sortArrow(partnerSort,field)}</th>`;
-  head.innerHTML = `<tr>${pTh('협력사명','name')}${pTh('지사','branch')}${showMonths?span.map(s=>pTh(colLbl(s)+unitNote,'m:'+colKey(s),'right')).join(''):''}${pTh('누계(하불)','cost','right')}${pTh('이익률','rate','right')}${pTh('고객수','clients','right')}</tr>`;
   const pMap={};
   data.forEach(r=>{
     const name=(r['협력사명']||'미확인');
@@ -2791,7 +2882,17 @@ function renderPartner() {
     pMap[key].ci  +=(+r['공헌이익(원)']||0);
     if(r['고객(화주)']) pMap[key].clients.add(r['고객(화주)']);
   });
-  const rows=Object.values(pMap);
+  let rows=Object.values(pMap);
+
+  // 컬럼 필터 적용
+  rows = rows.filter(r => {
+    for(const [f,vals] of Object.entries(pColFilters)) {
+      if(!vals.has(String(r[f]||''))) return false;
+    }
+    return true;
+  });
+  _pRows = rows; // 컬럼필터 팝업용 캐시
+
   // 정렬 적용
   const pGetters={
     name:r=>r.name, branch:r=>r.branch, cost:r=>r.cost,
@@ -2804,19 +2905,57 @@ function renderPartner() {
   } else {
     rows.sort(makeComparator(partnerSort,pGetters));
   }
-  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
+
+  // 헤더 (▾ 필터 + ↕ 정렬)
+  const pFCls = f => pColFilters[f] ? ' active' : '';
+  const pSCls = f => partnerSort.field===f ? ` ${partnerSort.dir}` : '';
+  const pThFix = (label, field, align, filtField) => {
+    const js = `style="justify-content:${align==='right'?'flex-end':'flex-start'};white-space:nowrap;"`;
+    return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;">
+      <div class="th-inner" ${js}>
+        <span style="cursor:pointer;" onclick="sortPartnerBy('${field}')">${label}</span>
+        ${filtField?`<button class="col-filter-btn${pFCls(filtField)}" onclick="openPColFilter(event,'${filtField}')">▾</button>`:''}
+        <button class="col-sort-btn${pSCls(field)}" onclick="sortPartnerBy('${field}')">↕</button>
+      </div>
+      <div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div>
+    </th>`;
+  };
+  const pThM = (label, field) =>
+    `<th style="text-align:right;white-space:nowrap;position:relative;">
+      <div class="th-inner" style="justify-content:flex-end;white-space:nowrap;">
+        <span style="cursor:pointer;" onclick="sortPartnerBy('${field}')">${label}</span>
+        <button class="col-sort-btn${pSCls(field)}" onclick="sortPartnerBy('${field}')">↕</button>
+      </div>
+      <div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div>
+    </th>`;
+
+  const visibleMonthCols = showMonths ? span.filter(s=>pH('m:'+colKey(s))) : [];
+  const totalCols = (pH('name')?1:0) + (pH('branch')?1:0) + visibleMonthCols.length
+                  + (pH('cost')?1:0) + (pH('rate')?1:0) + (pH('clients')?1:0);
+
+  head.innerHTML = `<tr>
+    ${pH('name')  ? pThFix('협력사명','name','left','name') : ''}
+    ${pH('branch')? pThFix('지사','branch','left','branch') : ''}
+    ${showMonths  ? span.map(s=> pH('m:'+colKey(s)) ? pThM(colLbl(s),'m:'+colKey(s)) : '').join('') : ''}
+    ${pH('cost')  ? pThFix('누계(하불)','cost','right') : ''}
+    ${pH('rate')  ? pThFix('이익률','rate','right') : ''}
+    ${pH('clients')? pThFix('고객수','clients','right') : ''}
+  </tr>`;
+
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols||2}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
     document.getElementById('partnerSub').textContent=`협력사별 · 0개사 · ${periodLabel(+y1,+m1,+y2,+m2)}`;return;}
   document.getElementById('partnerSub').textContent=`협력사별 · ${rows.length}개사 · ${periodLabel(+y1,+m1,+y2,+m2)}`;
+
   // 합계 행
   const mTot={}; span.forEach(s=>{const k=colKey(s);mTot[k]=rows.reduce((sm,r)=>sm+(r.ms[k]||0),0);});
   const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0);
   let html=`<tr style="background:var(--navy);font-weight:800;">
-    <td style="color:#fff;">합계</td>
-    <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개사</td>
-    ${showMonths?span.map(s=>{const k=colKey(s);return `<td class="num" style="color:#fff;font-size:11.5px;">${mTot[k]?fmtM(mTot[k]):'—'}</td>`;}).join(''):''}
-    <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
-    <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
-    <td class="num" style="color:rgba(255,255,255,.6);"></td>
+    ${pH('name')   ? `<td style="color:#fff;">합계</td>` : ''}
+    ${pH('branch') ? `<td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개사</td>` : ''}
+    ${showMonths?span.map(s=>{const k=colKey(s);return pH('m:'+k)?`<td class="num" style="color:#fff;font-size:11.5px;">${mTot[k]?fmtM(mTot[k]):'—'}</td>`:''}).join(''):''}
+    ${pH('cost')   ? `<td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>` : ''}
+    ${pH('rate')   ? `<td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>` : ''}
+    ${pH('clients')? `<td class="num" style="color:rgba(255,255,255,.6);"></td>` : ''}
   </tr>`;
   rows.forEach(r=>{
     const key=r.name+'|'+r.branch;
@@ -2835,26 +2974,26 @@ function renderPartner() {
     const clRows=Object.entries(clMap).sort((a,b)=>b[1].cost-a[1].cost);
     const safeKey=key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     html+=`<tr style="cursor:pointer;" onclick="togglePartnerDetail('${safeKey}')">
-      <td><span style="font-size:11px;color:var(--teal);margin-right:4px;">${open?'▼':'▶'}</span><span class="bold">${r.name}</span></td>
-      <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
-      ${showMonths?span.map(s=>{const k=colKey(s);return `<td class="num" style="font-size:11.5px;">${r.ms[k]?fmtM(r.ms[k]):'—'}</td>`;}).join(''):''}
-      <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>
-      <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
-      <td class="num" style="color:var(--gray400);font-size:11px;">${r.clients.size}개</td>
+      ${pH('name')   ? `<td><span style="font-size:11px;color:var(--teal);margin-right:4px;">${open?'▼':'▶'}</span><span class="bold">${r.name}</span></td>` : ''}
+      ${pH('branch') ? `<td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>` : ''}
+      ${showMonths?span.map(s=>{const k=colKey(s);return pH('m:'+k)?`<td class="num" style="font-size:11.5px;">${r.ms[k]?fmtM(r.ms[k]):'—'}</td>`:''}).join(''):''}
+      ${pH('cost')   ? `<td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>` : ''}
+      ${pH('rate')   ? `<td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>` : ''}
+      ${pH('clients')? `<td class="num" style="color:var(--gray400);font-size:11px;">${r.clients.size}개</td>` : ''}
     </tr>`;
     if(open){
-      html+=`<tr><td colspan="${totalCols+1}" style="padding:0;background:var(--gray50);">
+      html+=`<tr><td colspan="${totalCols}" style="padding:0;background:var(--gray50);">
         <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
           <thead><tr style="background:var(--navy2);">
             <th style="padding:7px 12px 7px 32px;color:rgba(255,255,255,.7);text-align:left;">고객(화주)</th>
-            ${showMonths?span.map(s=>`<th style="padding:7px 8px;color:rgba(255,255,255,.7);text-align:right;">${colLbl(s)}${unitNote}</th>`).join(''):''}
+            ${showMonths?span.map(s=>pH('m:'+colKey(s))?`<th style="padding:7px 8px;color:rgba(255,255,255,.7);text-align:right;">${colLbl(s)}</th>`:'').join(''):''}
             <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">누계</th>
             <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">이익률</th>
             <th style="padding:7px 12px;color:rgba(255,255,255,.7);text-align:right;">건수</th>
           </tr></thead>
           <tbody>${clRows.map(([name,d])=>`<tr style="border-bottom:1px solid var(--gray100);">
             <td style="padding:6px 12px 6px 32px;color:var(--navy);font-weight:600;">↳ ${name}</td>
-            ${showMonths?span.map(s=>{const k=colKey(s);return `<td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-size:11.5px;">${d.ms[k]?fmtM(d.ms[k]):'—'}</td>`;}).join(''):''}
+            ${showMonths?span.map(s=>{const k=colKey(s);return pH('m:'+k)?`<td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-size:11.5px;">${d.ms[k]?fmtM(d.ms[k]):'—'}</td>`:''}).join(''):''}
             <td style="padding:6px 12px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmt(d.cost)}</td>
             <td style="padding:6px 12px;text-align:right;"><span class="badge b-green">${pct(d.ci,d.rev)}</span></td>
             <td style="padding:6px 12px;text-align:right;color:var(--gray500);">${d.cnt}건</td>
@@ -2907,15 +3046,7 @@ function renderClient() {
   const showMonths = clientViewMode !== 'cumul';
   const useMan = showMonths && span.length > 6;
   const fmtM = v => useMan ? fmtMan(v) : fmt(v);
-  const unitNote = useMan ? ' (만원)' : '';
-  const totalCols = 3 + (showMonths ? span.length : 0) + 2;
-
-  const cTh=(label,field,align)=>`<th style="text-align:${align||'left'};cursor:pointer;white-space:nowrap;" onclick="sortClientBy('${field}')">${label} ${sortArrow(clientSort,field)}</th>`;
-  head.innerHTML=`<tr>
-    ${cTh('고객(화주)','client')}${cTh('협력사명','partner')}${cTh('지사','branch')}
-    ${showMonths?span.map(s=>cTh(colLbl(s)+unitNote,'m:'+colKey(s),'right')).join(''):''}
-    ${cTh('누계(하불)','cost','right')}${cTh('이익률','rate','right')}${cTh('건수','cnt','right')}
-  </tr>`;
+  const cH = col => !clientHiddenCols.has(col);
 
   const cMap={};
   data.forEach(r=>{
@@ -2928,7 +3059,17 @@ function renderClient() {
     cMap[key].ci  +=(+r['공헌이익(원)']||0);
     cMap[key].cnt++;
   });
-  const rows=Object.values(cMap);
+  let rows=Object.values(cMap);
+
+  // 컬럼 필터 적용
+  rows = rows.filter(r => {
+    for(const [f,vals] of Object.entries(cColFilters)) {
+      if(!vals.has(String(r[f]||''))) return false;
+    }
+    return true;
+  });
+  _cRows = rows;
+
   const cGetters={
     client:r=>r.client, partner:r=>r.partner, branch:r=>r.branch,
     cost:r=>r.cost, rate:r=>r.rev?r.ci/r.rev:0, cnt:r=>r.cnt, _default:r=>r.cost,
@@ -2939,29 +3080,68 @@ function renderClient() {
   } else {
     rows.sort(makeComparator(clientSort,cGetters));
   }
-  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols+1}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
+
+  // 헤더
+  const cFCls = f => cColFilters[f] ? ' active' : '';
+  const cSCls = f => clientSort.field===f ? ` ${clientSort.dir}` : '';
+  const cThFix = (label, field, align, filtField) => {
+    const js = `style="justify-content:${align==='right'?'flex-end':'flex-start'};white-space:nowrap;"`;
+    return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;">
+      <div class="th-inner" ${js}>
+        <span style="cursor:pointer;" onclick="sortClientBy('${field}')">${label}</span>
+        ${filtField?`<button class="col-filter-btn${cFCls(filtField)}" onclick="openCColFilter(event,'${filtField}')">▾</button>`:''}
+        <button class="col-sort-btn${cSCls(field)}" onclick="sortClientBy('${field}')">↕</button>
+      </div>
+      <div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div>
+    </th>`;
+  };
+  const cThM = (label, field) =>
+    `<th style="text-align:right;white-space:nowrap;position:relative;">
+      <div class="th-inner" style="justify-content:flex-end;white-space:nowrap;">
+        <span style="cursor:pointer;" onclick="sortClientBy('${field}')">${label}</span>
+        <button class="col-sort-btn${cSCls(field)}" onclick="sortClientBy('${field}')">↕</button>
+      </div>
+      <div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div>
+    </th>`;
+
+  const visibleMC = showMonths ? span.filter(s=>cH('m:'+colKey(s))) : [];
+  const totalCols = (cH('client')?1:0)+(cH('partner')?1:0)+(cH('branch')?1:0)+visibleMC.length
+                  +(cH('cost')?1:0)+(cH('rate')?1:0)+(cH('cnt')?1:0);
+
+  head.innerHTML=`<tr>
+    ${cH('client') ? cThFix('고객(화주)','client','left','client') : ''}
+    ${cH('partner')? cThFix('협력사명','partner','left','partner') : ''}
+    ${cH('branch') ? cThFix('지사','branch','left','branch') : ''}
+    ${showMonths   ? span.map(s=> cH('m:'+colKey(s)) ? cThM(colLbl(s),'m:'+colKey(s)) : '').join('') : ''}
+    ${cH('cost')   ? cThFix('누계(하불)','cost','right') : ''}
+    ${cH('rate')   ? cThFix('이익률','rate','right') : ''}
+    ${cH('cnt')    ? cThFix('건수','cnt','right') : ''}
+  </tr>`;
+
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="${totalCols||2}" style="text-align:center;padding:36px;color:var(--gray400);">데이터 없음</td></tr>`;
     document.getElementById('clientSub').textContent=`고객별 · 0개 고객 · ${periodLabel(+y1,+m1,+y2,+m2)}`;return;}
   document.getElementById('clientSub').textContent=`고객별 · ${rows.length}개 고객 · ${periodLabel(+y1,+m1,+y2,+m2)}`;
+
   // 합계 행
   const mTot={}; span.forEach(s=>{const k=colKey(s);mTot[k]=rows.reduce((sm,r)=>sm+(r.ms[k]||0),0);});
   const tRev=rows.reduce((s,r)=>s+r.rev,0), tCost=rows.reduce((s,r)=>s+r.cost,0), tCI=rows.reduce((s,r)=>s+r.ci,0), tCnt=rows.reduce((s,r)=>s+r.cnt,0);
   const totalRow=`<tr style="background:var(--navy);font-weight:800;">
-    <td style="color:#fff;">합계</td>
-    <td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개</td>
-    <td></td>
-    ${showMonths?span.map(s=>{const k=colKey(s);return `<td class="num" style="color:#fff;font-size:11.5px;">${mTot[k]?fmtM(mTot[k]):'—'}</td>`;}).join(''):''}
-    <td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>
-    <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
-    <td class="num" style="color:rgba(255,255,255,.6);">${tCnt}건</td>
+    ${cH('client') ? `<td style="color:#fff;">합계</td>` : ''}
+    ${cH('partner')? `<td style="color:rgba(255,255,255,.6);font-size:11px;">${rows.length}개</td>` : ''}
+    ${cH('branch') ? `<td></td>` : ''}
+    ${showMonths?span.map(s=>{const k=colKey(s);return cH('m:'+k)?`<td class="num" style="color:#fff;font-size:11.5px;">${mTot[k]?fmtM(mTot[k]):'—'}</td>`:''}).join(''):''}
+    ${cH('cost')   ? `<td class="num" style="color:#fff;background:rgba(0,184,169,.25);">${fmt(tCost)}</td>` : ''}
+    ${cH('rate')   ? `<td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>` : ''}
+    ${cH('cnt')    ? `<td class="num" style="color:rgba(255,255,255,.6);">${tCnt}건</td>` : ''}
   </tr>`;
   tb.innerHTML=totalRow+rows.map(r=>`<tr>
-    <td class="bold">${r.client}</td>
-    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.partner||'—'}</td>
-    <td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>
-    ${showMonths?span.map(s=>{const k=colKey(s);return `<td class="num" style="font-size:11.5px;">${r.ms[k]?fmtM(r.ms[k]):'—'}</td>`;}).join(''):''}
-    <td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>
-    <td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>
-    <td class="num" style="color:var(--gray500);">${r.cnt}건</td>
+    ${cH('client') ? `<td class="bold">${r.client}</td>` : ''}
+    ${cH('partner')? `<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.partner||'—'}</td>` : ''}
+    ${cH('branch') ? `<td><span class="badge ${bc(r.branch)}">${r.branch.replace('지사','')}</span></td>` : ''}
+    ${showMonths?span.map(s=>{const k=colKey(s);return cH('m:'+k)?`<td class="num" style="font-size:11.5px;">${r.ms[k]?fmtM(r.ms[k]):'—'}</td>`:''}).join(''):''}
+    ${cH('cost')   ? `<td class="num" style="background:var(--teal-ll);font-weight:800;">${fmt(r.cost)}</td>` : ''}
+    ${cH('rate')   ? `<td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>` : ''}
+    ${cH('cnt')    ? `<td class="num" style="color:var(--gray500);">${r.cnt}건</td>` : ''}
   </tr>`).join('');
 }
 
@@ -3324,14 +3504,18 @@ function removeDuplicateRows(){
 // COLUMN FILTER
 // ══════════════════════════════════════════════════════
 let colFilters = {};   // { fieldName: Set(['val1','val2']) } — missing key = no filter
-let _cfField = '';     // currently open popup field
-let _cfIsBm  = false; // true면 배치관리 컬럼 필터 모드
-let bmColFilters = {}; // 배치관리 컬럼 필터
+let _cfField  = '';        // currently open popup field
+let _cfTarget = 'table';   // 'table' | 'batch' | 'partner' | 'client'
+let bmColFilters = {};     // 배치관리 컬럼 필터
+
+function getCfFilters() {
+  return {table:colFilters, batch:bmColFilters, partner:pColFilters, client:cColFilters}[_cfTarget];
+}
 
 function openColFilter(event, fieldName) {
   event.stopPropagation();
-  _cfField = fieldName;
-  _cfIsBm  = false;
+  _cfField  = fieldName;
+  _cfTarget = 'table';
   const popup = document.getElementById('colFilterPopup');
   const allVals = [...new Set(allData.map(r => String(r[fieldName] || '')).filter(Boolean))].sort();
   const selected = colFilters[fieldName] || null;
@@ -3345,8 +3529,8 @@ function openColFilter(event, fieldName) {
 
 function openBmColFilter(event, fieldName) {
   event.stopPropagation();
-  _cfField = fieldName;
-  _cfIsBm  = true;
+  _cfField  = fieldName;
+  _cfTarget = 'batch';
   const popup = document.getElementById('colFilterPopup');
   const getField = b => fieldName === 'branch' ? (b.branch||'')
                       : fieldName === 'uploader' ? (b.uploader||'')
@@ -3359,6 +3543,26 @@ function openBmColFilter(event, fieldName) {
   popup.classList.add('show');
   document.getElementById('cfSearch').value = '';
   document.getElementById('cfSearch').focus();
+}
+
+function _openGenericCfPopup(event, fieldName, vals, filterMap, target) {
+  event.stopPropagation();
+  _cfField  = fieldName;
+  _cfTarget = target;
+  const selected = filterMap[fieldName] || null;
+  _cfAllVals = vals;
+  _renderCfList(vals, selected);
+  _positionCfPopup(event);
+  document.getElementById('colFilterPopup').classList.add('show');
+  document.getElementById('cfSearch').value = '';
+}
+function openPColFilter(event, fieldName) {
+  const vals = [...new Set(_pRows.map(r => String(r[fieldName]||'')).filter(Boolean))].sort();
+  _openGenericCfPopup(event, fieldName, vals, pColFilters, 'partner');
+}
+function openCColFilter(event, fieldName) {
+  const vals = [...new Set(_cRows.map(r => String(r[fieldName]||'')).filter(Boolean))].sort();
+  _openGenericCfPopup(event, fieldName, vals, cColFilters, 'client');
 }
 
 function _positionCfPopup(event) {
@@ -3395,7 +3599,7 @@ function _renderCfList(vals, selected) {
 function filterCfList() {
   const q = document.getElementById('cfSearch').value.trim().toLowerCase();
   const filtered = q ? _cfAllVals.filter(v => v.toLowerCase().includes(q)) : _cfAllVals;
-  _renderCfList(filtered, (_cfIsBm ? bmColFilters : colFilters)[_cfField] || null);
+  _renderCfList(filtered, getCfFilters()[_cfField] || null);
 }
 
 function cfToggleAll(cb) {
@@ -3409,7 +3613,7 @@ function cfSyncAll() {
 
 function applyColFilter() {
   const cfAll = document.getElementById('cfAll');
-  const target = _cfIsBm ? bmColFilters : colFilters;
+  const target = getCfFilters();
   if (cfAll.checked) {
     delete target[_cfField];
   } else {
@@ -3419,15 +3623,18 @@ function applyColFilter() {
     target[_cfField] = new Set(checked);
   }
   closeColFilter();
-  if (_cfIsBm) { renderBatchManager(); }
+  if (_cfTarget==='batch') renderBatchManager();
+  else if (_cfTarget==='partner') renderPartner();
+  else if (_cfTarget==='client') renderClient();
   else { tableShowAll = false; renderTable(); }
 }
 
 function resetColFilter() {
-  const target = _cfIsBm ? bmColFilters : colFilters;
-  delete target[_cfField];
+  delete getCfFilters()[_cfField];
   closeColFilter();
-  if (_cfIsBm) { renderBatchManager(); }
+  if (_cfTarget==='batch') renderBatchManager();
+  else if (_cfTarget==='partner') renderPartner();
+  else if (_cfTarget==='client') renderClient();
   else { tableShowAll = false; renderTable(); }
 }
 
