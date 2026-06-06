@@ -674,6 +674,133 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ══ MOBILE (≤640px) ══════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* 헤더 */
+  .app-header { height: 52px; padding: 0 12px; }
+  .sebang-ci-logo img { height: 28px; }
+  .header-center h1 { font-size: 13px; }
+  .header-center p  { display: none; }
+  .header-right #userInfo { display: none !important; }
+  .admin-btn { font-size: 11px; padding: 5px 8px; }
+
+  /* 좌측 네비 → 하단 고정 탭바로 전환 */
+  .left-nav {
+    position: fixed;
+    left: 0; right: 0; bottom: 0; top: auto !important;
+    width: 100% !important;
+    height: 56px;
+    flex-direction: row;
+    padding: 0;
+    border-right: none;
+    border-top: 1px solid rgba(255,255,255,.12);
+    z-index: 300;
+    overflow: hidden;
+    overflow-y: hidden;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.25);
+  }
+  .left-nav-logo { display: none; }
+  .nav-item {
+    flex: 1;
+    flex-direction: column;
+    padding: 6px 2px 4px;
+    font-size: 9px;
+    gap: 2px;
+    border-radius: 0;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+  }
+  .nav-item.active {
+    background: rgba(255,255,255,.1);
+    border-left: none;
+    border-bottom: 3px solid var(--teal);
+  }
+  .nav-item .ni { font-size: 18px; line-height: 1; }
+
+  /* 메인 영역: 좌측 마진 제거, 하단 탭바 높이만큼 여백 */
+  .main-wrap {
+    margin-left: 0;
+    padding: 12px 12px 68px;
+  }
+
+  /* 실적현황 뷰: 고정 높이 해제 → 자연 스크롤 */
+  #view-dash {
+    height: auto;
+    overflow: visible;
+  }
+
+  /* 헤더 필터 영역 */
+  .dash-hdr {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .dash-hdr > div:last-child {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .dash-hdr .fsel { font-size: 12px; padding: 4px 6px; }
+  .page-title { font-size: 16px; }
+  .page-sub   { font-size: 11px; }
+
+  /* KPI 카드: 4→ 2×2 */
+  .dash-kpi {
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .dash-kpi .kpi-box { padding: 10px 12px; }
+  .dash-kpi .kpi-val { font-size: 17px; }
+  .dash-kpi .kpi-sub { font-size: 9.5px; word-break: break-all; }
+
+  /* 메인 그리드: 2컬럼 → 1컬럼 세로 */
+  .dash-main {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    flex: none;
+    min-height: unset;
+  }
+
+  /* 차트 카드 고정 높이 해제 */
+  .dash-chart-card { flex: none; }
+  .dash-chart-card .card-inner { flex: none; min-height: unset; padding: 12px; }
+  .dash-chart-card .chart-wrap { min-height: 200px; height: 200px; }
+
+  /* 지표 토글 버튼 크기 축소 */
+  .metric-tog { font-size: 10px; padding: 3px 7px; }
+
+  /* 용역구분 카드 */
+  .cat-card .card-inner { padding: 10px 12px; }
+
+  /* TOP10 협력사: 고정 높이 해제 */
+  .rank-card { flex: none; }
+  .rank-card .card-inner {
+    flex: none;
+    overflow: visible;
+    padding: 10px 12px;
+    min-height: unset;
+  }
+  .rank-list { flex: none; }
+  .rank-row  { padding: 5px 0; }
+  .rank-name { font-size: 12px; }
+  .rank-val  { font-size: 12px; }
+
+  /* 협력사 팝업: 전체 너비 */
+  .ppopup-box {
+    max-width: 100%;
+    border-radius: 12px;
+    padding: 14px 14px;
+    max-height: 88vh;
+  }
+
+  /* 카드 기본 패딩 축소 */
+  .card-inner { padding: 12px; }
+}
 .fade-in { animation: fadeIn .3s ease forwards; }
 </style>
 </head>
