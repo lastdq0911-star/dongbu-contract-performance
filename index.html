@@ -661,22 +661,23 @@ td.bold { font-weight: 700; color: var(--navy); }
 .dash-kpi .kpi-val { font-size: 18px; }
 .dash-kpi .kpi-label { margin-bottom: 2px; font-size: 11px; }
 .dash-kpi .kpi-sub  { font-size: 10px; }
-/* 3-컬럼 대시보드: 월별차트(가변) | TOP10협력사 | 용역구분 */
-.dash-main { display: grid; grid-template-columns: 1fr 260px 185px; gap: 10px; flex: 1; min-height: 0; }
-.dash-chart-card { display: flex; flex-direction: column; min-height: 0; }
+/* 2-컬럼 대시보드: 좌(월별차트+용역구분) | 우(TOP10) */
+.dash-main { display: grid; grid-template-columns: 1fr 270px; gap: 10px; flex: 1; min-height: 0; }
+/* 좌: 월별차트(가변) + 용역구분(고정) 세로 배치 */
+.dash-left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.dash-chart-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
 .dash-chart-card .section-label { margin-bottom: 8px; flex-shrink: 0; }
 .dash-chart-card .chart-wrap { flex: 1; min-height: 0; }
+/* 용역구분 카드 */
+.cat-card { flex-shrink: 0; }
+.cat-card .card-inner { padding: 9px 14px; }
+.cat-card .section-label { margin-bottom: 4px; }
+.cat-chart > div { padding: 4px 0 !important; }
 /* TOP10 협력사 카드 */
 .rank-card { display: flex; flex-direction: column; min-height: 0; }
 .rank-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; }
 .rank-list { flex: 1; overflow-y: auto; }
-/* 용역구분 카드 */
-.cat-card { display: flex; flex-direction: column; min-height: 0; }
-.cat-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 9px 12px; }
-.cat-card .section-label { margin-bottom: 4px; flex-shrink: 0; }
-.cat-chart { flex: 1; overflow-y: auto; }
-.cat-chart > div { padding: 4px 0 !important; }
 
 /* ══ BRANCH PROGRESS ══════════════════════════════════ */
 .branch-kpi { display: flex; flex-direction: column; gap: 8px; }
@@ -807,31 +808,49 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="kpi-val" id="kCI">—</div>
         <div class="kpi-sub" id="kCIS">이익률 —</div>
       </div>
+      <div class="kpi-box navy">
+        <div class="kpi-label">협력사 수</div>
+        <div class="kpi-val" id="kCnt">—</div>
+        <div class="kpi-sub" id="kCntS">—</div>
+      </div>
     </div>
 
-    <!-- Main Grid: 월별 추이(축소) | 하불 상위 TOP10 | 용역구분별 비중 -->
+    <!-- Main Grid: 좌(월별차트+용역구분) | 우(TOP10) -->
     <div class="dash-main">
-      <!-- 월별 차트 -->
-      <div class="card dash-chart-card">
-        <div class="card-inner">
-          <div class="section-label">
-            <div style="font-size:14px;">📊</div>
-            <h3>월별 실적 추이</h3>
-          </div>
-          <div class="chart-wrap">
-            <div class="chart-cols" id="monthChart">
-              <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
+      <!-- 좌: 월별 차트 + 용역구분별 비중 -->
+      <div class="dash-left">
+        <div class="card dash-chart-card">
+          <div class="card-inner">
+            <div class="section-label">
+              <div style="font-size:14px;">📊</div>
+              <h3>월별 실적 추이</h3>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-cols" id="monthChart">
+                <div class="empty" style="width:100%;padding:16px 0;"><div class="ei">📈</div><p>데이터 없음</p></div>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
+              <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
+              <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
             </div>
           </div>
-          <div class="chart-legend">
-            <div class="leg-item"><div class="leg-dot" style="background:var(--teal);"></div>매출</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--gold);"></div>하불</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--green);"></div>공헌이익</div>
+        </div>
+        <div class="card cat-card">
+          <div class="card-inner">
+            <div class="section-label">
+              <div style="font-size:13px;">📦</div>
+              <h3>용역구분별 비중</h3>
+            </div>
+            <div id="catChart" class="cat-chart">
+              <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 하불 상위 협력사 TOP10 -->
+      <!-- 우: 하불 상위 협력사 TOP10 -->
       <div class="card rank-card">
         <div class="card-inner">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -843,19 +862,6 @@ td.bold { font-weight: 700; color: var(--navy); }
           </div>
           <div class="rank-list" id="topPartners">
             <div class="empty"><div class="ei">🏢</div><p>데이터 없음</p></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 용역구분별 비중 -->
-      <div class="card cat-card">
-        <div class="card-inner">
-          <div class="section-label">
-            <div style="font-size:13px;">📦</div>
-            <h3>용역구분별 비중</h3>
-          </div>
-          <div id="catChart" class="cat-chart">
-            <div class="empty"><div class="ei">📦</div><p>데이터 없음</p></div>
           </div>
         </div>
       </div>
@@ -1839,9 +1845,11 @@ function renderDash() {
   document.getElementById('kRev').textContent   = fmtB(rev);
   document.getElementById('kCost').textContent  = fmtB(cost);
   document.getElementById('kCI').textContent    = fmtB(ci);
+  document.getElementById('kCnt').textContent   = pnrs.length;
   document.getElementById('kRevS').textContent  = fmt(rev)+'원';
   document.getElementById('kCostS').textContent = fmt(cost)+'원';
   document.getElementById('kCIS').textContent   = '이익률 '+pct(ci,rev);
+  document.getElementById('kCntS').textContent  = '협력사 ' + pnrs.length + '개사';
 
   renderMonthChart(data, lo, hi);
   renderTopPartners(data);
@@ -1875,10 +1883,11 @@ function renderMonthChart(data, lo, hi) {
     const rCost = d.cost > 0 ? Math.max(Math.round((d.cost/maxV)*1000), 10) : 0;
     const rCi   = d.ci   > 0 ? Math.max(Math.round((d.ci  /maxV)*1000), 10) : 0;
     const lbl = multiYear ? `${String(d.y).slice(2)}.${d.m}` : `${d.m}월`;
+    const ciRate = d.rev > 0 ? (d.ci / d.rev * 100).toFixed(1) + '%' : '';
     // visible segment labels: show value inside each colored segment
-    const mkSeg = (val, flex, bg, opacity='') =>
+    const mkSeg = (val, flex, bg, opacity='', extra='') =>
       val > 0 ? `<div class="bar-seg" style="flex:${flex};background:${bg};${opacity?'opacity:'+opacity+';':''}position:relative;overflow:visible;">
-        <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none;">${fmtB(val)}</span>
+        <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none;">${fmtB(val)}${extra}</span>
       </div>` : '';
     return `
     <div class="bar-col${!hasData?' no-data':''}">
@@ -1888,7 +1897,7 @@ function renderMonthChart(data, lo, hi) {
         <div class="bar-stack" style="flex:${rRev}">
           ${mkSeg(d.rev, rRev, 'var(--teal)', '.4')}
           ${mkSeg(d.cost, rCost, 'var(--gold)')}
-          ${mkSeg(d.ci, rCi, 'var(--green)')}
+          ${mkSeg(d.ci, rCi, 'var(--green)', '', ciRate ? ' ('+ciRate+')' : '')}
         </div>
       </div>
       <div class="bar-lbl">${lbl}</div>
