@@ -1266,7 +1266,7 @@ td.bold { font-weight: 700; color: var(--navy); }
       </div>
       <span id="batchAdminHint" style="font-size:12px;color:var(--gray400);"></span>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" style="flex-wrap:wrap;gap:8px 6px;">
       <label>지사</label>
       <select class="fsel" id="bmBranch" onchange="renderBatchManager()">
         <option value="">전체</option>
@@ -1276,7 +1276,7 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="fsep"></div>
       <label>연도</label>
       <select class="fsel" id="bmYear" onchange="renderBatchManager()">
-        <option value="">전체</option><option>2026</option><option>2025</option>
+        <option value="">전체</option>
       </select>
       <div class="fsep"></div>
       <label>월</label>
@@ -1288,7 +1288,12 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <div class="fsep"></div>
-      <input class="finp" id="bmSrch" placeholder="🔍 업로더·라벨 검색" oninput="renderBatchManager()" style="min-width:120px;">
+      <label>업로더</label>
+      <select class="fsel" id="bmUploader" onchange="renderBatchManager()" style="max-width:140px;">
+        <option value="">전체</option>
+      </select>
+      <div class="fsep"></div>
+      <input class="finp" id="bmSrch" placeholder="🔍 라벨·협력사 검색" oninput="renderBatchManager()" style="min-width:120px;">
     </div>
     <div class="card" style="padding:0;overflow:hidden;">
       <div class="tbl-wrap">
@@ -1374,6 +1379,7 @@ const BCOLORS = ['var(--teal)','var(--green)','var(--gold)','#8b5cf6'];
 let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let _periodInited = false;  // 기간 셀렉트 최초 초기화 여부
+let selectedBatchId = null; // 전체데이터에서 선택된 배치 필터
 let pendingRows = [];
 let previewShowAll = false;
 let partnerExpanded = {};
@@ -1682,16 +1688,40 @@ function renderBatchList() {
   const el = document.getElementById('batchList');
   if (!el) return;
   if (!batches.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
-    ${batches.map(b => `
-      <div style="display:inline-flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--gray200);border-radius:8px;padding:5px 10px;font-size:12px;">
-        <span style="font-weight:700;color:var(--navy);">${b.label}</span>
-        <span style="color:var(--gray400);">${b.count}건</span>
-        <span style="font-size:11px;color:var(--teal);font-weight:600;">👤${b.uploader||'?'}</span>
-        <span style="font-size:10px;color:var(--gray300);">${b.ts}</span>
-        ${isAdminUser() ? `<button onclick="deleteBatch('${b.id}')" title="이 배치 전체 삭제" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>` : ''}
-      </div>`).join('')}
-  </div>`;
+  const tags = batches.map(b => {
+    const sel = selectedBatchId === b.id;
+    return `
+      <div onclick="toggleBatchFilter('${b.id}')" style="display:inline-flex;align-items:center;gap:6px;
+        background:${sel?'var(--teal)':'var(--white)'};
+        border:1.5px solid ${sel?'var(--teal)':'var(--gray200)'};
+        border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .15s;"
+        title="클릭하면 이 배치만 필터링">
+        <span style="font-weight:700;color:${sel?'#fff':'var(--navy)'};">${b.label}</span>
+        <span style="color:${sel?'rgba(255,255,255,.7)':'var(--gray400)'};">${b.count}건</span>
+        <span style="font-size:11px;color:${sel?'rgba(255,255,255,.85)':'var(--teal)'};font-weight:600;">👤${b.uploader||'?'}</span>
+        ${isAdminUser() ? `<button onclick="event.stopPropagation();deleteBatch('${b.id}')" title="이 배치 전체 삭제"
+          style="border:none;background:${sel?'rgba(255,255,255,.2)':'var(--red-l)'};color:${sel?'#fff':'var(--red)'};
+          border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>` : ''}
+      </div>`;
+  }).join('');
+  const clearBtn = selectedBatchId
+    ? `<button onclick="toggleBatchFilter(null)" style="border:1.5px solid var(--gray200);border-radius:8px;
+        padding:5px 10px;font-size:12px;background:var(--gray100);color:var(--gray500);cursor:pointer;font-weight:700;">✕ 필터 해제</button>`
+    : '';
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">${tags}${clearBtn}</div>`;
+}
+
+function toggleBatchFilter(batchId) {
+  selectedBatchId = (selectedBatchId === batchId) ? null : batchId;
+  if (selectedBatchId) tableSearched = true; // 배치 선택 시 바로 테이블 표시
+  renderBatchList();
+  renderTable();
+  if (selectedBatchId) {
+    const b = batches.find(x=>x.id===selectedBatchId);
+    if (b) toast(`'${b.label}' 배치만 표시 중`);
+  } else {
+    toast('배치 필터 해제');
+  }
 }
 
 function deleteBatch(batchId) {
@@ -1722,72 +1752,105 @@ async function _deleteBatch(batchId) {
 // ══════════════════════════════════════════════════════
 // 배치 관리 화면
 // ══════════════════════════════════════════════════════
+function refreshBmUploaderFilter() {
+  const sel = document.getElementById('bmUploader'); if (!sel) return;
+  const cur = sel.value;
+  const uploaders = [...new Set(batches.map(b=>b.uploader||'').filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">전체</option>' +
+    uploaders.map(u=>`<option value="${u}">${u}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
 function renderBatchManager() {
   const head = document.getElementById('batchHead');
   const tb   = document.getElementById('batchManagerBody');
   const hint = document.getElementById('batchAdminHint');
   if (!head || !tb) return;
 
+  refreshBmUploaderFilter();
+
   hint.textContent = isAdminUser()
-    ? '🔑 관리자 — 배치 삭제 가능'
+    ? '🔑 관리자 — 배치 삭제·전체데이터 이동 가능'
     : '조회 전용 (삭제는 관리자만 가능)';
 
-  const fBranch = document.getElementById('bmBranch').value;
-  const fYear   = document.getElementById('bmYear').value;
-  const fMonth  = document.getElementById('bmMonth').value;
-  const q       = document.getElementById('bmSrch').value.trim().toLowerCase();
+  const fBranch   = document.getElementById('bmBranch').value;
+  const fYear     = document.getElementById('bmYear').value;
+  const fMonth    = document.getElementById('bmMonth').value;
+  const fUploader = document.getElementById('bmUploader').value;
+  const q         = document.getElementById('bmSrch').value.trim().toLowerCase();
 
-  // 배치별 실데이터 집계 (매출/하불/공헌이익) — allData 기준 재계산
+  // 배치별 실데이터 집계 (매출/하불/공헌이익/협력사목록)
   let rows = batches.map(b => {
     const recs = allData.filter(r => r._batchId === b.id);
     const rev  = recs.reduce((s,r)=>s+(+r['매출(원)']||0),0);
     const cost = recs.reduce((s,r)=>s+(+r['하불(원)']||0),0);
-    return { ...b, realCount: recs.length, rev, cost, ci: rev-cost };
+    const partners = [...new Set(recs.map(r=>r['협력사명']).filter(Boolean))];
+    return { ...b, realCount: recs.length, rev, cost, ci: rev-cost, partners };
   });
 
   // 필터
   rows = rows.filter(b => {
-    if (fBranch && b.branch !== fBranch)               return false;
-    if (fYear   && String(b.year) !== String(fYear))   return false;
-    if (fMonth  && String(b.month) !== String(fMonth)) return false;
+    if (fBranch   && b.branch !== fBranch)                   return false;
+    if (fYear     && String(b.year) !== String(fYear))       return false;
+    if (fMonth    && String(b.month) !== String(fMonth))     return false;
+    if (fUploader && (b.uploader||'') !== fUploader)         return false;
     if (q) {
-      const hay = `${b.label} ${b.uploader||''}`.toLowerCase();
+      const hay = [b.label, b.uploader||'', ...b.partners].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
-  // 최신순 (연·월 내림차순)
   rows.sort((a,b)=> (b.year-a.year) || (b.month-a.month) || String(a.branch).localeCompare(b.branch));
 
   document.getElementById('batchSub').textContent =
     `총 ${rows.length}개 배치 · ${rows.reduce((s,b)=>s+b.realCount,0)}건`;
 
   head.innerHTML = `<tr>
-    <th>지사</th><th>기간</th><th style="text-align:right">건수</th>
+    <th>지사</th><th>기간</th><th>업로더</th>
+    <th style="text-align:right">건수</th>
     <th style="text-align:right">매출</th><th style="text-align:right">하불</th>
-    <th style="text-align:right">공헌이익</th><th>업로더 / 등록시각</th>
+    <th style="text-align:right">공헌이익</th>
+    <th>포함 협력사</th>
     <th style="text-align:center">관리</th>
   </tr>`;
 
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 배치 없음</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 배치 없음</td></tr>`;
     return;
   }
 
-  tb.innerHTML = rows.map(b => `<tr>
+  tb.innerHTML = rows.map(b => {
+    const partnerTags = b.partners.slice(0,4).map(p=>
+      `<span style="font-size:10px;background:var(--gray100);border-radius:4px;padding:1px 5px;margin:1px;">${p}</span>`
+    ).join('') + (b.partners.length>4 ? `<span style="font-size:10px;color:var(--gray400);"> +${b.partners.length-4}</span>` : '');
+    return `<tr>
     <td><span class="badge ${bc(b.branch)}">${(b.branch||'—').replace('지사','')}</span></td>
     <td class="bold">${b.year}년 ${b.month}월</td>
+    <td style="font-size:11.5px;color:var(--teal);font-weight:700;">👤${b.uploader||'?'}<br><span style="color:var(--gray300);font-weight:400;font-size:10px;">${b.ts||''}</span></td>
     <td class="num">${b.realCount}건</td>
     <td class="num">${fmt(b.rev)}</td>
     <td class="num" style="font-weight:700;">${fmt(b.cost)}</td>
     <td class="num" style="color:var(--green);">${fmt(b.ci)}</td>
-    <td style="font-size:11.5px;"><span style="color:var(--teal);font-weight:700;">👤${b.uploader||'?'}</span> <span style="color:var(--gray300);">${b.ts||''}</span></td>
-    <td style="text-align:center;">
+    <td style="max-width:160px;line-height:1.8;">${partnerTags||'—'}</td>
+    <td style="text-align:center;white-space:nowrap;">
+      <button onclick="viewBatchInTable('${b.id}')" style="border:none;background:var(--teal-l);color:var(--teal);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;margin-right:4px;">📋 확인</button>
       ${isAdminUser()
-        ? `<button onclick="deleteBatch('${b.id}')" style="border:none;background:var(--red-l);color:var(--red);border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>`
+        ? `<button onclick="deleteBatch('${b.id}')" style="border:none;background:var(--red-l);color:var(--red);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">✕ 삭제</button>`
         : `<span style="color:var(--gray300);font-size:11px;">—</span>`}
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
+}
+
+// 배치 → 전체데이터 화면으로 이동해서 해당 배치만 필터링
+function viewBatchInTable(batchId) {
+  selectedBatchId = batchId;
+  tableSearched = true;
+  goViewByName('table');
+  renderBatchList();
+  renderTable();
+  const b = batches.find(x=>x.id===batchId);
+  if (b) toast(`'${b.label}' 데이터만 표시 중`);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1819,12 +1882,12 @@ function populateYearSelects(){
   batches.forEach(b=>{ if(b.year){ ys.add(+b.year); dataYears.add(+b.year); } });
   const years = [...ys].filter(Boolean).sort((a,b)=>b-a);
   const yOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  // 기본 기간: 15일 이전 → 전월, 15일 이후 → 당월
+  // 기본 기간: 익월 20일까지 전월 유지, 21일부터 당월로 전환
   const now = new Date();
-  const useCurrentMonth = now.getDate() >= 15;
+  const useCurrentMonth = now.getDate() >= 21;
   const base = useCurrentMonth
-    ? new Date(now.getFullYear(), now.getMonth(), 1)       // 이번달 1일
-    : new Date(now.getFullYear(), now.getMonth() - 1, 1);  // 지난달 1일
+    ? new Date(now.getFullYear(), now.getMonth(), 1)       // 이번달
+    : new Date(now.getFullYear(), now.getMonth() - 1, 1);  // 전월
   const curY = String(base.getFullYear());
   const curM = String(base.getMonth() + 1);
 
@@ -2196,6 +2259,7 @@ function renderTable() {
   const q2       = document.getElementById('srch').value.trim();
   filteredIndices = [];
   allData.forEach((r,idx)=>{
+    if(selectedBatchId && r['_batchId'] !== selectedBatchId) return;
     if(!inPeriod(r,lo,hi))                              return;
     if(branch2   && r['지사']!==branch2)                return;
     if(client2   && r['고객(화주)']!==client2)          return;
