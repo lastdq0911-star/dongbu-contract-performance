@@ -1656,8 +1656,6 @@ function updateAuthUI() {
   }
   const btnFilterDel = document.getElementById('btnFilterDel');
   if (btnFilterDel) btnFilterDel.style.display = isAdminUser() ? '' : 'none';
-  // 전체데이터 배치 태그도 권한에 맞게 갱신
-  renderBatchList();
 }
 // 기존 호출 호환용 별칭
 function updateAdminUI() { updateAuthUI(); }
@@ -1682,8 +1680,6 @@ function requireAdmin(cb) {
 function renderBatchList() {
   const el = document.getElementById('batchList');
   if (!el) return;
-  // 전체데이터의 배치 태그는 관리자에게만 표시
-  if (!isAdminUser()) { el.innerHTML = ''; return; }
   if (!batches.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
     ${batches.map(b => `
