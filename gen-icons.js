@@ -24,11 +24,20 @@ body { width:${size}px; height:${size}px; overflow:hidden;
 .ci-wrap img { width: 100%; height: auto; }
 .label {
   font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-  font-size: ${Math.round(size * 0.115)}px;
+  font-size: ${Math.round(size * 0.105)}px;
   font-weight: 800;
   color: #00b8a9;
   letter-spacing: ${Math.round(size * 0.008)}px;
   white-space: nowrap;
+}
+.sub {
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-size: ${Math.round(size * 0.072)}px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: ${Math.round(size * 0.004)}px;
+  white-space: nowrap;
+  margin-top: -${Math.round(size * 0.02)}px;
 }
 .line {
   width: ${Math.round(size * 0.6)}px;
@@ -44,6 +53,7 @@ body { width:${size}px; height:${size}px; overflow:hidden;
   </div>
   <div class="line"></div>
   <div class="label">실적현황</div>
+  <div class="sub">동부계약관리</div>
 </body></html>`;
 
 async function generate() {
