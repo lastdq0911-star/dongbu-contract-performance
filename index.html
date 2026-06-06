@@ -721,7 +721,6 @@ td.bold { font-weight: 700; color: var(--navy); }
 
   <!-- 우측: 버튼들 -->
   <div class="header-right">
-    <span class="rec-badge" id="recBadge">0건</span>
     <span id="userInfo" style="display:none;font-size:11.5px;color:rgba(255,255,255,.85);font-weight:700;letter-spacing:-.2px;"></span>
     <button class="admin-btn" id="loginBtn" onclick="toggleLogin()" title="로그인 / 로그아웃">🔑 로그인</button>
   </div>
@@ -1453,7 +1452,7 @@ function fd(data, {year,branch,month,cat,q}={}) {
     return true;
   });
 }
-function upBadge() { document.getElementById('recBadge').textContent = allData.length+'건'; }
+function upBadge() { /* recBadge removed */ }
 
 // ══════════════════════════════════════════════════════
 // SUPABASE
