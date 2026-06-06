@@ -738,14 +738,18 @@ td.bold { font-weight: 700; color: var(--navy); }
   /* 메인 영역: 좌측 마진 제거, 하단 탭바 높이만큼 여백 */
   .main-wrap {
     margin-left: 0;
+    max-width: 100% !important;   /* 데스크톱 calc(100% - 180px) 해제 */
+    width: 100%;
     padding: 12px 12px 68px;
   }
 
-  /* 실적현황 뷰: 고정 높이 해제 → 자연 스크롤 */
-  #view-dash {
+  /* 실적현황 뷰: 가로 flex → 세로, 고정 높이 해제 → 자연 스크롤 */
+  #view-dash.active {
+    flex-direction: column;
     height: auto;
     overflow: visible;
   }
+  #view-dash { height: auto; overflow: visible; }
 
   /* 헤더 필터 영역 */
   .dash-hdr {
@@ -1173,9 +1177,6 @@ td.bold { font-weight: 700; color: var(--navy); }
       </div>
     </div>
 
-    <!-- 업로드 배치 목록 -->
-    <div id="batchList" style="margin-bottom:10px;"></div>
-
     <div class="filter-row" style="flex-wrap:wrap;gap:8px 6px;">
       <label>지사</label>
       <select class="fsel" id="fBranch">
@@ -1215,6 +1216,11 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="fsep"></div>
       <label>업로더</label>
       <select class="fsel" id="fUploader" style="max-width:110px;">
+        <option value="">전체</option>
+      </select>
+      <div class="fsep"></div>
+      <label>업로드파일</label>
+      <select class="fsel" id="fBatch" style="max-width:200px;">
         <option value="">전체</option>
       </select>
       <div class="fsep"></div>
@@ -1601,7 +1607,7 @@ function resetClientFilters(){
   renderClient();
 }
 
-// ── 컬럼 리사이즈 ─────────────────────────────────────────
+// ── 컬럼 리사이즈 (협력사별/고객별 — auto layout, th 너비 조정) ──
 function startColResize(e, th) {
   e.preventDefault(); e.stopPropagation();
   const startX = e.clientX;
@@ -1613,7 +1619,31 @@ function startColResize(e, th) {
   const onUp = () => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
+    document.body.style.cursor = '';
   };
+  document.body.style.cursor = 'col-resize';
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// ── 컬럼 리사이즈 (전체데이터 — fixed layout, colgroup <col> 너비 조정) ──
+function startColResizeMain(e, th) {
+  e.preventDefault(); e.stopPropagation();
+  const origIdx = +th.dataset.col;
+  const col = (_origCols && _origCols[origIdx]) ? _origCols[origIdx] : null;
+  const startX = e.clientX;
+  const startW = th.offsetWidth;
+  const onMove = ev => {
+    const w = Math.max(36, startW + ev.clientX - startX);
+    if (col) col.style.width = w + 'px';
+    else { th.style.width = w + 'px'; th.style.minWidth = w + 'px'; }
+  };
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.body.style.cursor = '';
+  };
+  document.body.style.cursor = 'col-resize';
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
@@ -2020,40 +2050,24 @@ function requireAdmin(cb) {
 // ══════════════════════════════════════════════════════
 // BATCH MANAGEMENT
 // ══════════════════════════════════════════════════════
+// 업로드파일(배치) 드롭다운 채우기 — 항상 보이는 칩 대신 필터로 사용
 function renderBatchList() {
-  const el = document.getElementById('batchList');
-  if (!el) return;
-  if (!batches.length) { el.innerHTML = ''; return; }
-  const tags = batches.map(b => {
-    const sel = selectedBatchId === b.id;
-    return `<div onclick="toggleBatchFilter('${b.id}')"
-      style="display:inline-flex;align-items:center;gap:6px;
-        background:${sel?'var(--teal)':'var(--white)'};
-        border:1.5px solid ${sel?'var(--teal)':'var(--gray200)'};
-        border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .15s;
-        box-shadow:${sel?'0 2px 8px rgba(0,150,136,.3)':'none'};"
-      title="${sel?'다시 클릭하면 필터 해제':'이 배치만 필터링'}">
-      <span style="font-weight:700;color:${sel?'#fff':'var(--navy)'};">${b.label}</span>
-      <span style="color:${sel?'rgba(255,255,255,.75)':'var(--gray400)'};">${b.count}건</span>
-      <span style="font-size:11px;color:${sel?'rgba(255,255,255,.85)':'var(--teal)'};font-weight:600;">👤${b.uploader||'?'}</span>
-      ${isAdminUser() ? `<button onclick="event.stopPropagation();deleteBatch('${b.id}')" title="이 배치 전체 삭제"
-        style="border:none;background:${sel?'rgba(255,255,255,.25)':'var(--red-l)'};color:${sel?'#fff':'var(--red)'};
-        border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;margin-left:2px;">✕ 삭제</button>` : ''}
-    </div>`;
-  }).join('');
-  const clearBtn = selectedBatchId
-    ? `<button onclick="toggleBatchFilter(null)"
-        style="border:1.5px solid var(--teal);border-radius:8px;padding:5px 12px;
-        font-size:12px;background:#fff;color:var(--teal);cursor:pointer;font-weight:700;">
-        ✕ 필터 해제</button>`
-    : '';
-  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">${tags}${clearBtn}</div>`;
+  const sel = document.getElementById('fBatch');
+  if (!sel) return;
+  const prev = selectedBatchId || sel.value || '';
+  // 최신 배치가 위로 오도록 역순 정렬
+  const sorted = [...batches].sort((a,b)=> (b.year-a.year) || (b.month-a.month) || String(a.branch).localeCompare(b.branch));
+  sel.innerHTML = '<option value="">전체</option>' +
+    sorted.map(b=>`<option value="${b.id}">${b.label} · ${b.count}건 · 👤${b.uploader||'?'}</option>`).join('');
+  // 이전 선택 유지 (존재하는 배치일 때만)
+  sel.value = (prev && batches.some(b=>b.id===prev)) ? prev : '';
 }
 
 function toggleBatchFilter(batchId) {
   selectedBatchId = (selectedBatchId === batchId) ? null : batchId;
   if (selectedBatchId) tableSearched = true; // 배치 선택 시 바로 테이블 표시
-  renderBatchList();
+  const sel = document.getElementById('fBatch');
+  if (sel) sel.value = selectedBatchId || '';
   renderTable();
   if (selectedBatchId) {
     const b = batches.find(x=>x.id===selectedBatchId);
@@ -2695,14 +2709,17 @@ function updateTableDropdowns() {
 let tableSearched = false; // 조회 버튼을 눌렀는지 여부
 
 function doTableSearch() {
+  // 업로드파일(배치) 드롭다운 값을 필터에 반영
+  const fb = document.getElementById('fBatch');
+  selectedBatchId = (fb && fb.value) ? fb.value : null;
   tableSearched = true;
   tableShowAll  = false;
   renderTable();
 }
 
 function resetTableFilters() {
-  ['fBranch','fClient','fPartner','fUploader'].forEach(id=>{
-    document.getElementById(id).value='';
+  ['fBranch','fClient','fPartner','fUploader','fBatch'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
   });
   // 기간 초기화 (빈값 → 전체 기간 조회)
   populateYearSelects();
@@ -2736,11 +2753,12 @@ function _cacheTableOriginals(){
   _origThs.forEach((th,i)=>{
     th.dataset.col=i; th.setAttribute('draggable','true'); th.classList.add('th-draggable');
     th.style.position = 'relative';
-    // 리사이즈 핸들 (중복 방지)
+    // 리사이즈 핸들 (중복 방지) — 고정 레이아웃이므로 colgroup의 <col> 너비 조정
     if (!th.querySelector('.resize-handle')) {
       const h = document.createElement('div');
       h.className = 'resize-handle';
-      h.addEventListener('mousedown', e => startColResize(e, th));
+      h.addEventListener('mousedown', e => startColResizeMain(e, th));
+      h.addEventListener('dragstart', e => { e.preventDefault(); e.stopPropagation(); });
       th.appendChild(h);
     }
   });
