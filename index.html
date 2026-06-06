@@ -627,7 +627,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 .dash-chart-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .dash-chart-card .card-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
 .dash-chart-card .section-label { margin-bottom: 8px; flex-shrink: 0; }
-.dash-chart-card .chart-wrap { flex: 1; min-height: 0; }
+.dash-chart-card .chart-wrap { flex: 1; min-height: 140px; }
 /* 용역구분 카드 */
 .cat-card { flex-shrink: 0; }
 .cat-card .card-inner { padding: 9px 14px; }
@@ -796,13 +796,14 @@ td.bold { font-weight: 700; color: var(--navy); }
               </select>
             </div>
             <!-- 지표 토글 버튼 -->
-            <div style="display:flex;gap:4px;flex-shrink:0;margin-bottom:6px;">
-              <button id="mBtn_rev"  class="metric-tog active" onclick="toggleChartMetric('rev')" >매출</button>
-              <button id="mBtn_cost" class="metric-tog active" onclick="toggleChartMetric('cost')">하불</button>
-              <button id="mBtn_ci"   class="metric-tog active" onclick="toggleChartMetric('ci')"  >공헌이익</button>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-bottom:6px;">
+              <span style="font-size:10px;color:var(--gray400);font-weight:600;white-space:nowrap;">지표 선택</span>
+              <button id="mBtn_rev"  class="metric-tog active" onclick="toggleChartMetric('rev')" title="매출 표시/숨기기">● 매출</button>
+              <button id="mBtn_cost" class="metric-tog active" onclick="toggleChartMetric('cost')" title="하불 표시/숨기기">● 하불</button>
+              <button id="mBtn_ci"   class="metric-tog active" onclick="toggleChartMetric('ci')"  title="공헌이익 표시/숨기기">● 공헌이익</button>
             </div>
             <div class="chart-wrap">
-              <svg id="monthChart" style="width:100%;height:100%;overflow:visible;"></svg>
+              <svg id="monthChart" style="width:100%;height:100%;min-height:140px;display:block;overflow:visible;"></svg>
             </div>
           </div>
         </div>
@@ -1336,6 +1337,7 @@ const BCOLORS = ['var(--teal)','var(--green)','var(--gold)','#8b5cf6'];
 let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let _periodInited = false;  // 기간 셀렉트 최초 초기화 여부
+let chartMetrics = new Set(['rev','cost','ci']); // 차트 지표 선택 상태
 let selectedBatchId = null; // 전체데이터에서 선택된 배치 필터
 let pendingRows = [];
 let previewShowAll = false;
@@ -1918,8 +1920,6 @@ function renderDash() {
   renderCatChart(data);
 }
 
-// 차트 지표 선택 상태
-let chartMetrics = new Set(['rev','cost','ci']);
 function toggleChartMetric(m) {
   if (chartMetrics.has(m) && chartMetrics.size === 1) return; // 최소 1개
   if (chartMetrics.has(m)) chartMetrics.delete(m); else chartMetrics.add(m);
@@ -1983,17 +1983,23 @@ function renderMonthChart(data, lo, hi) {
       if (val > 0) {
         rects += `<rect x="${gx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh.toFixed(1)}"
           fill="${COLORS[metric]}" rx="2" opacity="${metric==='rev'?0.5:1}"/>`;
-        // 금액 레이블 (막대 충분히 클 때)
-        if (bh > 16) {
-          const lbl = metric==='ci'
-            ? fmtB(val)+(d.rev>0?' ('+(d.ci/d.rev*100).toFixed(1)+'%)':'')
-            : fmtB(val);
-          labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+4).toFixed(1)}" text-anchor="middle"
-            font-size="7" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${lbl}</text>`;
+        // 금액 레이블
+        if (bh > 22) {
+          labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+3).toFixed(1)}" text-anchor="middle"
+            font-size="7.5" fill="#fff" font-weight="700" font-family="DM Mono,monospace">${fmtB(val)}</text>`;
+          if (metric==='ci' && d.rev>0) {
+            const rate = (d.ci/d.rev*100).toFixed(1)+'%';
+            labels += `<text x="${cx.toFixed(1)}" y="${(by+bh/2+13).toFixed(1)}" text-anchor="middle"
+              font-size="7" fill="rgba(255,255,255,.85)" font-weight="600" font-family="DM Mono,monospace">(${rate})</text>`;
+          }
         } else if (bh > 0) {
-          // 작은 막대는 위에 표시
           labels += `<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle"
             font-size="7" fill="${COLORS[metric]}" font-weight="700" font-family="DM Mono,monospace">${fmtB(val)}</text>`;
+          if (metric==='ci' && d.rev>0) {
+            const rate = (d.ci/d.rev*100).toFixed(1)+'%';
+            labels += `<text x="${cx.toFixed(1)}" y="${(by-11).toFixed(1)}" text-anchor="middle"
+              font-size="7" fill="${COLORS[metric]}" font-weight="600" font-family="DM Mono,monospace">(${rate})</text>`;
+          }
         }
       }
     });
