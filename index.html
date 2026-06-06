@@ -1819,10 +1819,14 @@ function populateYearSelects(){
   batches.forEach(b=>{ if(b.year){ ys.add(+b.year); dataYears.add(+b.year); } });
   const years = [...ys].filter(Boolean).sort((a,b)=>b-a);
   const yOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  // 현재 연월 (기본 기간 = 해당월)
+  // 기본 기간: 15일 이전 → 전월, 15일 이후 → 당월
   const now = new Date();
-  const curY = String(now.getFullYear());
-  const curM = String(now.getMonth() + 1);
+  const useCurrentMonth = now.getDate() >= 15;
+  const base = useCurrentMonth
+    ? new Date(now.getFullYear(), now.getMonth(), 1)       // 이번달 1일
+    : new Date(now.getFullYear(), now.getMonth() - 1, 1);  // 지난달 1일
+  const curY = String(base.getFullYear());
+  const curM = String(base.getMonth() + 1);
 
   // 각 기간 셀렉트: 아직 값이 없을 때(초기화)만 해당월로 세팅, 이미 값 있으면 유지
   const setYearSel = (id, defaultVal) => {
