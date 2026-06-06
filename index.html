@@ -235,7 +235,7 @@ body {
 /* ══ VIEW PAGES ══════════════════════════════════════ */
 .view { display: none; }
 .view.active { display: block; }
-/* 대시보드는 flex 레이아웃 — active일 때만 적용 */
+/* 실적현황는 flex 레이아웃 — active일 때만 적용 */
 #view-dash.active { display: flex; }
 
 /* ══ PAGE TITLE ══════════════════════════════════════ */
@@ -635,7 +635,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 .dash-kpi .kpi-val { font-size: 18px; }
 .dash-kpi .kpi-label { margin-bottom: 2px; font-size: 11px; }
 .dash-kpi .kpi-sub  { font-size: 10px; }
-/* 2-컬럼 대시보드: 좌(월별차트+용역구분) | 우(TOP10) */
+/* 2-컬럼 실적현황: 좌(월별차트+용역구분) | 우(TOP10) */
 .dash-main { display: grid; grid-template-columns: 1fr 270px; gap: 10px; flex: 1; min-height: 0; }
 /* 좌: 월별차트(가변) + 용역구분(고정) 세로 배치 */
 .dash-left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
@@ -708,7 +708,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 <nav class="left-nav">
   <div class="left-nav-logo">메뉴</div>
   <button class="nav-item active" data-view="dash" onclick="goView('dash', this)">
-    <span class="ni">📊</span>대시보드
+    <span class="ni">📊</span>실적현황
   </button>
   <button class="nav-item" data-view="upload" onclick="goView('upload', this)">
     <span class="ni">📤</span>업로드
@@ -730,13 +730,13 @@ td.bold { font-weight: 700; color: var(--navy); }
 <!-- ══ MAIN WRAP ════════════════════════════════════════ -->
 <div class="main-wrap">
 
-  <!-- ══════════════ VIEW: 대시보드 ══════════════════════ -->
+  <!-- ══════════════ VIEW: 실적현황 ══════════════════════ -->
   <div class="view active" id="view-dash">
 
     <!-- Header -->
     <div class="dash-hdr">
       <div>
-        <div class="page-title">대시보드</div>
+        <div class="page-title">실적현황</div>
         <div class="page-sub" id="dashSub">데이터를 업로드하면 현황이 표시됩니다</div>
       </div>
       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
@@ -1367,8 +1367,8 @@ let allData = [];
 let batches = [];   // [{id, label, branch, year, month, count, ts}]
 let _periodInited = false;  // 기간 셀렉트 최초 초기화 여부
 let chartMetrics = new Set(['rev','cost','ci']); // 차트 지표 선택 상태
-let _dashData = [];          // 현재 대시보드 필터된 데이터
-let _dashPeriodLabel = '';   // 현재 대시보드 기간 라벨
+let _dashData = [];          // 현재 실적현황 필터된 데이터
+let _dashPeriodLabel = '';   // 현재 실적현황 기간 라벨
 let selectedBatchId = null; // 전체데이터에서 선택된 배치 필터
 let pendingRows = [];
 let previewShowAll = false;
@@ -1899,7 +1899,7 @@ function populateYearSelects(){
     if (!_periodInited) el.value = defaultVal;
   };
 
-  // 대시보드: 해당월~해당월
+  // 실적현황: 해당월~해당월
   setYearSel('dashY1', curY); setYearSel('dashY2', curY);
   setMonthSel('dashM1', curM); setMonthSel('dashM2', curM);
   // 협력사별: 해당월~해당월
@@ -2176,15 +2176,18 @@ function openPartnerPopup(name) {
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:90px;background:var(--teal-ll);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">매출</div>
-        <div style="font-size:16px;font-weight:800;color:var(--teal-d);">${fmtB(tRev)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal-d);">${fmtEok(tRev)}</div>
+        <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tRev)}원</div>
       </div>
       <div style="flex:1;min-width:90px;background:var(--gold-l);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">하불</div>
-        <div style="font-size:16px;font-weight:800;color:var(--gold);">${fmtB(tCost)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--gold);">${fmtEok(tCost)}</div>
+        <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tCost)}원</div>
       </div>
       <div style="flex:1;min-width:90px;background:var(--green-l);border-radius:8px;padding:8px 12px;">
         <div style="font-size:11px;color:var(--gray500);">공헌이익</div>
-        <div style="font-size:16px;font-weight:800;color:var(--green);">${fmtB(tCi)} <span style="font-size:11px;font-weight:600;">(${tRev?((tCi/tRev*100).toFixed(1)+'%'):'—'})</span></div>
+        <div style="font-size:16px;font-weight:800;color:var(--green);">${fmtEok(tCi)}</div>
+        <div style="font-size:11px;color:var(--gray500);margin-top:2px;">${fmt(tCi)}원 (${tRev?((tCi/tRev*100).toFixed(1)+'%'):'—'})</div>
       </div>
     </div>
     <div style="overflow:auto;max-height:50vh;border:1px solid var(--gray200);border-radius:8px;">
@@ -2884,7 +2887,7 @@ async function _doConfirmData(){
   document.getElementById('sn2').className='step-num done';
   document.getElementById('sn3').className='step-num done';
   toast('✓ '+allData.length+'건 반영 완료');
-  // 대시보드로 자동 이동
+  // 실적현황로 자동 이동
   setTimeout(()=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
