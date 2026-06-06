@@ -1442,6 +1442,10 @@ const fmtEok = n => {
   if (!n && n!==0) return '—';
   return (n/1e8).toFixed(1)+'억';
 };
+const fmtMan = n => {
+  if (!n && n!==0) return '—';
+  return Math.round(n/1e4).toLocaleString('ko-KR')+'만원';
+};
 const pct = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '—';
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
@@ -2156,9 +2160,9 @@ function openPartnerPopup(name) {
     <tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:8px 10px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
       <td style="padding:8px 10px;font-weight:700;color:var(--navy);">${r.client}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';">${fmt(r.rev)}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmt(r.cost)}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--green);">${fmt(r.ci)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';">${fmtMan(r.rev)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';font-weight:700;">${fmtMan(r.cost)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--green);">${fmtMan(r.ci)}</td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono';color:var(--gray500);">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
       <td style="padding:8px 10px;text-align:right;color:var(--gray400);">${r.cnt}건</td>
       <td style="padding:8px 10px;width:90px;">
