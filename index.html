@@ -1055,7 +1055,7 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div style="display:flex;gap:6px;align-items:center;">
         <span style="font-size:11px;color:var(--gray400);">↔ 열 제목을 드래그해 순서 변경</span>
         <button class="btn btn-sm" onclick="resetColumnOrder()" title="열 순서 기본값으로">↺ 열 초기화</button>
-        <button class="btn btn-sm" onclick="deleteByFilter()" style="background:var(--red-l);color:var(--red);border-color:var(--red);">🗑 필터삭제</button>
+        <button class="btn btn-sm" id="btnFilterDel" onclick="deleteByFilter()" style="display:none;background:var(--red-l);color:var(--red);border-color:var(--red);">🗑 필터삭제</button>
         <button class="btn btn-sm" onclick="exportExcel()">⬇ 내보내기</button>
       </div>
     </div>
@@ -1646,15 +1646,18 @@ function updateAuthUI() {
     info.style.display = 'none';
   }
   if (typeof loadUploaderId === 'function') loadUploaderId();
-  // 배치관리 메뉴는 관리자에게만 노출
+  // 배치관리 메뉴 & 필터삭제 버튼은 관리자에게만 노출
   const navBatch = document.getElementById('navBatch');
   if (navBatch) {
     navBatch.style.display = isAdminUser() ? '' : 'none';
-    // 관리자가 아닌데 배치관리 화면에 있으면 대시보드로 이동
     if (!isAdminUser() && document.getElementById('view-batch').classList.contains('active')) {
       goViewByName('dash');
     }
   }
+  const btnFilterDel = document.getElementById('btnFilterDel');
+  if (btnFilterDel) btnFilterDel.style.display = isAdminUser() ? '' : 'none';
+  // 전체데이터 배치 태그도 권한에 맞게 갱신
+  renderBatchList();
 }
 // 기존 호출 호환용 별칭
 function updateAdminUI() { updateAuthUI(); }
@@ -1679,6 +1682,8 @@ function requireAdmin(cb) {
 function renderBatchList() {
   const el = document.getElementById('batchList');
   if (!el) return;
+  // 전체데이터의 배치 태그는 관리자에게만 표시
+  if (!isAdminUser()) { el.innerHTML = ''; return; }
   if (!batches.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
     ${batches.map(b => `
