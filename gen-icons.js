@@ -18,7 +18,7 @@ body { width:${size}px; height:${size}px; overflow:hidden;
   align-items:center; justify-content:center; gap:${Math.round(size*0.05)}px;
 }
 .ci-wrap {
-  width: ${Math.round(size * 0.72)}px;
+  width: ${Math.round(size * 0.55)}px;
   display: flex; align-items: center; justify-content: center;
 }
 .ci-wrap img { width: 100%; height: auto; }
