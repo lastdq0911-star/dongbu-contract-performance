@@ -691,8 +691,11 @@ td.bold { font-weight: 700; color: var(--navy); }
 /* ══ MOBILE (≤640px) ══════════════════════════════════ */
 @media (max-width: 640px) {
 
-  /* 헤더 */
-  .app-header { height: 52px; padding: 0 12px; }
+  /* 헤더 — safe-area(노치/다이나믹아일랜드) 대응 */
+  .app-header {
+    height: calc(52px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 12px 0;
+  }
   .sebang-ci-logo img { height: 28px; }
   .header-center h1 { font-size: 13px; }
   .header-center p  { display: none; }
@@ -787,6 +790,9 @@ td.bold { font-weight: 700; color: var(--navy); }
   .dash-chart-card { flex: none; }
   .dash-chart-card .card-inner { flex: none; min-height: unset; padding: 12px; }
   .dash-chart-card .chart-wrap { min-height: 200px; height: 200px; }
+
+  /* 모바일에서 차트 확대 버튼 표시 */
+  #chartExpandBtn { display: flex !important; align-items: center; gap: 4px; }
 
   /* 지표 토글 버튼 크기 축소 */
   .metric-tog { font-size: 10px; padding: 3px 7px; }
@@ -943,6 +949,7 @@ td.bold { font-weight: 700; color: var(--navy); }
                 <div style="font-size:14px;">📊</div>
                 <h3>월별 실적 추이</h3>
               </div>
+              <button id="chartExpandBtn" onclick="openChartPopup()" style="display:none;border:1px solid var(--gray200);border-radius:8px;background:var(--gray50);padding:4px 8px;font-size:11px;cursor:pointer;color:var(--gray700);">🔍 크게보기</button>
               <select id="chartCatFilter" onchange="renderDash()" style="font-size:11px;border:1px solid var(--gray200);border-radius:6px;padding:3px 6px;color:var(--navy);background:#fff;cursor:pointer;">
                 <option value="">전체 용역</option>
                 <option value="컨테이너운송">컨테이너운송</option>
@@ -1457,6 +1464,17 @@ td.bold { font-weight: 700; color: var(--navy); }
   <div class="cf-footer">
     <button class="cf-apply" onclick="applyColFilter()">적용</button>
     <button class="cf-reset" onclick="resetColFilter()">초기화</button>
+  </div>
+</div>
+
+<!-- ══ 모바일 차트 확대 팝업 ══════════════════════════ -->
+<div id="chartPopupOverlay" onclick="if(event.target===this)closeChartPopup()" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:16px;width:calc(100% - 24px);max-width:500px;padding:16px;position:relative;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:14px;font-weight:700;color:var(--navy);">📊 월별 실적 추이</span>
+      <button onclick="closeChartPopup()" style="border:none;background:var(--gray100);border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <svg id="monthChartPopup" style="width:100%;height:280px;display:block;overflow:visible;"></svg>
   </div>
 </div>
 
@@ -2373,8 +2391,25 @@ function toggleChartMetric(m) {
   renderDash();
 }
 
+function openChartPopup() {
+  const overlay = document.getElementById('chartPopupOverlay');
+  overlay.style.display = 'flex';
+  // 팝업 SVG에 현재 차트 데이터로 렌더
+  const catF = (document.getElementById('chartCatFilter')||{}).value || '';
+  const data = catF ? _dashData.filter(r=>r['용역구분']===catF) : _dashData;
+  const lo = (document.getElementById('dFrom')||{}).value || '';
+  const hi = (document.getElementById('dTo')||{}).value || '';
+  renderMonthChartToSvg(data, lo, hi, 'monthChartPopup');
+}
+function closeChartPopup() {
+  document.getElementById('chartPopupOverlay').style.display = 'none';
+}
+
 function renderMonthChart(data, lo, hi) {
-  const svg = document.getElementById('monthChart');
+  renderMonthChartToSvg(data, lo, hi, 'monthChart');
+}
+function renderMonthChartToSvg(data, lo, hi, svgId) {
+  const svg = document.getElementById(svgId);
   if (!svg) return;
   if (!data.length) {
     svg.innerHTML = '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" fill="#94a3b8">데이터 없음</text>';
