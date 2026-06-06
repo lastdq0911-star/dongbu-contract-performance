@@ -1244,7 +1244,7 @@ td.bold { font-weight: 700; color: var(--navy); }
             <col style="width:62px">   <!-- 업로더 -->
             <col style="width:30px">   <!-- 관리 -->
           </colgroup>
-          <thead id="tblHead">
+          <thead id="tblHead" oncontextmenu="openColCtxTable(event)">
             <tr>
               <th><div class="th-inner">지사<button class="col-filter-btn" onclick="openColFilter(event,'지사')">▾</button></div></th>
               <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">연/월<button class="col-sort-btn" onclick="setSort('연월',this)">↕</button></div></th>
@@ -1283,20 +1283,19 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">협력사별 실적</div>
         <div class="page-sub" id="partnerSub">월별 하불 현황</div>
       </div>
-      <button class="btn btn-sm" onclick="openColVisPopup(event,'partner')">📋 열 숨기기</button>
       <button class="btn btn-sm" onclick="exportExcel('partner')">⬇ 내보내기</button>
     </div>
     <div class="filter-row">
       <label>지사</label>
-      <select class="fsel" id="pBranch" onchange="renderPartner()">
+      <select class="fsel" id="pBranch">
         <option value="">전체</option>
         <option>부산지사</option><option>울산지사</option>
         <option>경북지사</option><option>강원지사</option>
       </select>
       <div class="fsep"></div>
       <label>기간</label>
-      <select class="fsel" id="pY1" onchange="renderPartner()"></select>
-      <select class="fsel" id="pM1" onchange="renderPartner()">
+      <select class="fsel" id="pY1"></select>
+      <select class="fsel" id="pM1">
         <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
@@ -1304,8 +1303,8 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <span style="color:var(--gray400);font-weight:700;">~</span>
-      <select class="fsel" id="pY2" onchange="renderPartner()"></select>
-      <select class="fsel" id="pM2" onchange="renderPartner()">
+      <select class="fsel" id="pY2"></select>
+      <select class="fsel" id="pM2">
         <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
@@ -1313,7 +1312,7 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <div class="fsep"></div>
-      <input class="finp" id="pSrch" placeholder="🔍 검색" oninput="renderPartner()" style="min-width:100px;">
+      <input class="finp" id="pSrch" placeholder="🔍 검색" style="min-width:100px;">
       <button onclick="renderPartner()" style="border:none;background:var(--teal);color:#fff;border-radius:var(--radius-xs);padding:6px 18px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;">🔍 조회</button>
       <button onclick="resetPartnerFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
       <div class="fsep"></div>
@@ -1341,20 +1340,19 @@ td.bold { font-weight: 700; color: var(--navy); }
         <div class="page-title">고객별 실적</div>
         <div class="page-sub" id="clientSub">화주·고객 단위 월별 현황</div>
       </div>
-      <button class="btn btn-sm" onclick="openColVisPopup(event,'client')">📋 열 숨기기</button>
       <button class="btn btn-sm" onclick="exportExcel('client')">⬇ 내보내기</button>
     </div>
     <div class="filter-row">
       <label>지사</label>
-      <select class="fsel" id="cBranch" onchange="renderClient()">
+      <select class="fsel" id="cBranch">
         <option value="">전체</option>
         <option>부산지사</option><option>울산지사</option>
         <option>경북지사</option><option>강원지사</option>
       </select>
       <div class="fsep"></div>
       <label>기간</label>
-      <select class="fsel" id="cY1" onchange="renderClient()"></select>
-      <select class="fsel" id="cM1" onchange="renderClient()">
+      <select class="fsel" id="cY1"></select>
+      <select class="fsel" id="cM1">
         <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
@@ -1362,8 +1360,8 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <span style="color:var(--gray400);font-weight:700;">~</span>
-      <select class="fsel" id="cY2" onchange="renderClient()"></select>
-      <select class="fsel" id="cM2" onchange="renderClient()">
+      <select class="fsel" id="cY2"></select>
+      <select class="fsel" id="cM2">
         <option value="" selected>—</option>
         <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
         <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
@@ -1371,7 +1369,7 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
       <div class="fsep"></div>
-      <input class="finp" id="cSrch" placeholder="🔍 고객·협력사 검색" oninput="renderClient()" style="min-width:100px;">
+      <input class="finp" id="cSrch" placeholder="🔍 고객·협력사 검색" style="min-width:100px;">
       <button onclick="renderClient()" style="border:none;background:var(--teal);color:#fff;border-radius:var(--radius-xs);padding:6px 18px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;">🔍 조회</button>
       <button onclick="resetClientFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
       <div class="fsep"></div>
@@ -1456,8 +1454,16 @@ td.bold { font-weight: 700; color: var(--navy); }
   </div>
 </div>
 
-<!-- ══ 열 숨기기 팝업 ════════════════════════════════════ -->
-<div class="col-vis-popup" id="colVisPopup"></div>
+<!-- ══ 열 우클릭 컨텍스트 메뉴 ══════════════════════════ -->
+<div id="colCtxMenu" style="position:fixed;z-index:9999;background:var(--white);border:1.5px solid var(--gray200);
+  border-radius:10px;box-shadow:var(--shadow-lg);padding:6px 0;min-width:170px;display:none;">
+  <div onclick="hideColFromCtx()" style="padding:9px 16px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='var(--gray50)'" onmouseout="this.style.background=''">
+    🙈 <span>이 열 숨기기</span>
+  </div>
+  <div onclick="showAllColsCtx()" style="padding:9px 16px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='var(--gray50)'" onmouseout="this.style.background=''">
+    👁 <span>모든 열 표시</span>
+  </div>
+</div>
 
 <!-- ══ LOGIN MODAL ══════════════════════════════════════ -->
 <div class="modal-overlay" id="loginModal">
@@ -1612,56 +1618,108 @@ function startColResize(e, th) {
   document.addEventListener('mouseup', onUp);
 }
 
-// ── 열 숨기기 팝업 ───────────────────────────────────────
-const P_COL_DEFS = [
-  {key:'name',   label:'협력사명'},
-  {key:'branch', label:'지사'},
-  {key:'cost',   label:'누계(하불)'},
-  {key:'rate',   label:'이익률'},
-  {key:'clients',label:'고객수'},
-];
-const C_COL_DEFS = [
-  {key:'client', label:'고객(화주)'},
-  {key:'partner',label:'협력사명'},
-  {key:'branch', label:'지사'},
-  {key:'cost',   label:'누계(하불)'},
-  {key:'rate',   label:'이익률'},
-  {key:'cnt',    label:'건수'},
-];
-let _colVisTarget = 'partner';
+// ── 우클릭 열 컨텍스트 메뉴 ─────────────────────────────
+let _ctxColKey  = null;   // 우클릭한 열의 key (partner/client)
+let _ctxColIdx  = -1;     // 우클릭한 열 원본 인덱스 (table)
+let _ctxTarget  = '';     // 'table'|'partner'|'client'
 
-function openColVisPopup(event, target) {
-  event.stopPropagation();
-  _colVisTarget = target;
-  const popup = document.getElementById('colVisPopup');
-  const defs = target === 'partner' ? P_COL_DEFS : C_COL_DEFS;
-  const hiddenSet = target === 'partner' ? partnerHiddenCols : clientHiddenCols;
-  popup.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--gray400);margin-bottom:6px;">열 표시/숨기기</div>`
-    + defs.map(d => `<label class="col-vis-item">
-        <input type="checkbox" ${hiddenSet.has(d.key)?'':'checked'} onchange="toggleColVis('${d.key}',this.checked)">
-        <span>${d.label}</span>
-      </label>`).join('')
-    + `<hr style="border:none;border-top:1px solid var(--gray100);margin:6px 0;">
-       <div style="font-size:11px;color:var(--gray400);">월별 컬럼은 개별 숨기기 지원 예정</div>`;
-  const btn = event.currentTarget;
-  const rect = btn.getBoundingClientRect();
-  popup.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
-  popup.style.left = Math.max(8, rect.right + window.scrollX - 170) + 'px';
-  popup.classList.toggle('show');
+function openColCtx(e, colKey, target) {
+  e.preventDefault(); e.stopPropagation();
+  _ctxColKey = colKey; _ctxTarget = target;
+  const m = document.getElementById('colCtxMenu');
+  m.style.display = 'block';
+  m.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+  m.style.top  = Math.min(e.clientY, window.innerHeight - 80) + 'px';
 }
-
-function toggleColVis(colKey, visible) {
-  const hiddenSet = _colVisTarget === 'partner' ? partnerHiddenCols : clientHiddenCols;
-  if (visible) hiddenSet.delete(colKey); else hiddenSet.add(colKey);
-  if (_colVisTarget === 'partner') renderPartner(); else renderClient();
+function openColCtxTable(e) {
+  const th = e.target.closest('th');
+  if (!th) return;
+  _cacheTableOriginals();
+  _ctxColIdx = _origThs ? _origThs.indexOf(th) : -1;
+  _ctxTarget = 'table';
+  _ctxColKey = null;
+  e.preventDefault();
+  const m = document.getElementById('colCtxMenu');
+  m.style.display = 'block';
+  m.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+  m.style.top  = Math.min(e.clientY, window.innerHeight - 80) + 'px';
 }
-
-document.addEventListener('click', e => {
-  const popup = document.getElementById('colVisPopup');
-  if (popup && !popup.contains(e.target) && !e.target.closest('[onclick*="openColVisPopup"]')) {
-    popup.classList.remove('show');
+function hideColFromCtx() {
+  document.getElementById('colCtxMenu').style.display = 'none';
+  if (_ctxTarget === 'table') {
+    if (_ctxColIdx >= 0) { tableHiddenCols.add(_ctxColIdx); applyTableColHide(); }
+  } else if (_ctxTarget === 'partner') {
+    if (_ctxColKey) { partnerHiddenCols.add(_ctxColKey); renderPartner(); }
+  } else if (_ctxTarget === 'client') {
+    if (_ctxColKey) { clientHiddenCols.add(_ctxColKey); renderClient(); }
   }
+}
+function showAllColsCtx() {
+  document.getElementById('colCtxMenu').style.display = 'none';
+  if (_ctxTarget === 'table') { tableHiddenCols.clear(); applyTableColHide(); }
+  else if (_ctxTarget === 'partner') { partnerHiddenCols.clear(); renderPartner(); }
+  else if (_ctxTarget === 'client') { clientHiddenCols.clear(); renderClient(); }
+}
+document.addEventListener('click', () => {
+  document.getElementById('colCtxMenu').style.display = 'none';
 });
+
+// 전체데이터 열 숨기기 (CSS display:none on th/td at visual position)
+let tableHiddenCols = new Set();
+function applyTableColHide() {
+  const table = document.getElementById('mainTable'); if (!table) return;
+  // 먼저 모두 초기화
+  table.querySelectorAll('th, td').forEach(el => { el.style.display = ''; });
+  // 숨길 열 적용: colOrder에서 원본 인덱스의 현재 위치 계산
+  tableHiddenCols.forEach(origIdx => {
+    const visPos = colOrder.indexOf(origIdx);
+    if (visPos < 0) return;
+    table.querySelectorAll('thead tr').forEach(tr => {
+      if (tr.children[visPos]) tr.children[visPos].style.display = 'none';
+    });
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      if (tr.children.length === TBL_COL_COUNT && tr.children[visPos])
+        tr.children[visPos].style.display = 'none';
+    });
+  });
+}
+
+// ── 협력사별/고객별 컬럼 드래그 이동 ────────────────────
+function setupDynColDrag(tableId) {
+  const table = document.getElementById(tableId); if (!table) return;
+  const ths = [...table.querySelectorAll('thead tr th')];
+  let dragSrc = -1;
+  ths.forEach((th, i) => {
+    th.draggable = true;
+    th.classList.add('th-draggable');
+    th.addEventListener('dragstart', e => {
+      dragSrc = i; e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => th.classList.add('th-dragging'), 0);
+    });
+    th.addEventListener('dragend', () => {
+      th.classList.remove('th-dragging');
+      table.querySelectorAll('.th-drop-target').forEach(x => x.classList.remove('th-drop-target'));
+    });
+    th.addEventListener('dragover', e => { e.preventDefault(); th.classList.add('th-drop-target'); });
+    th.addEventListener('dragleave', () => th.classList.remove('th-drop-target'));
+    th.addEventListener('drop', e => {
+      e.preventDefault(); th.classList.remove('th-drop-target');
+      if (dragSrc < 0 || dragSrc === i) return;
+      const htr = table.querySelector('thead tr');
+      // 헤더 이동
+      if (dragSrc < i) htr.insertBefore(ths[dragSrc], th.nextSibling);
+      else             htr.insertBefore(ths[dragSrc], th);
+      // 본문 각 행 이동
+      table.querySelectorAll('tbody tr').forEach(tr => {
+        const cells = [...tr.children];
+        if (cells.length <= Math.max(dragSrc, i)) return;
+        if (dragSrc < i) tr.insertBefore(cells[dragSrc], cells[i].nextSibling);
+        else             tr.insertBefore(cells[dragSrc], cells[i]);
+      });
+      dragSrc = -1;
+    });
+  });
+}
 // 정렬 화살표 표시
 function sortArrow(state, field){
   if(state.field!==field) return '<span style="opacity:.25;">↕</span>';
@@ -2828,6 +2886,7 @@ function renderTable() {
     </td></tr>`;
   }
   applyTableColOrder();
+  applyTableColHide();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2911,7 +2970,7 @@ function renderPartner() {
   const pSCls = f => partnerSort.field===f ? ` ${partnerSort.dir}` : '';
   const pThFix = (label, field, align, filtField) => {
     const js = `style="justify-content:${align==='right'?'flex-end':'flex-start'};white-space:nowrap;"`;
-    return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;">
+    return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;" oncontextmenu="openColCtx(event,'${field}','partner')">
       <div class="th-inner" ${js}>
         <span style="cursor:pointer;" onclick="sortPartnerBy('${field}')">${label}</span>
         ${filtField?`<button class="col-filter-btn${pFCls(filtField)}" onclick="openPColFilter(event,'${filtField}')">▾</button>`:''}
@@ -2921,7 +2980,7 @@ function renderPartner() {
     </th>`;
   };
   const pThM = (label, field) =>
-    `<th style="text-align:right;white-space:nowrap;position:relative;">
+    `<th style="text-align:right;white-space:nowrap;position:relative;" oncontextmenu="openColCtx(event,'${field}','partner')">
       <div class="th-inner" style="justify-content:flex-end;white-space:nowrap;">
         <span style="cursor:pointer;" onclick="sortPartnerBy('${field}')">${label}</span>
         <button class="col-sort-btn${pSCls(field)}" onclick="sortPartnerBy('${field}')">↕</button>
@@ -3003,6 +3062,7 @@ function renderPartner() {
     }
   });
   tb.innerHTML=html;
+  setupDynColDrag('partnerTable');
 }
 
 function togglePartnerDetail(key){
@@ -3086,7 +3146,7 @@ function renderClient() {
   const cSCls = f => clientSort.field===f ? ` ${clientSort.dir}` : '';
   const cThFix = (label, field, align, filtField) => {
     const js = `style="justify-content:${align==='right'?'flex-end':'flex-start'};white-space:nowrap;"`;
-    return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;">
+    return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;" oncontextmenu="openColCtx(event,'${field}','client')">
       <div class="th-inner" ${js}>
         <span style="cursor:pointer;" onclick="sortClientBy('${field}')">${label}</span>
         ${filtField?`<button class="col-filter-btn${cFCls(filtField)}" onclick="openCColFilter(event,'${filtField}')">▾</button>`:''}
@@ -3096,7 +3156,7 @@ function renderClient() {
     </th>`;
   };
   const cThM = (label, field) =>
-    `<th style="text-align:right;white-space:nowrap;position:relative;">
+    `<th style="text-align:right;white-space:nowrap;position:relative;" oncontextmenu="openColCtx(event,'${field}','client')">
       <div class="th-inner" style="justify-content:flex-end;white-space:nowrap;">
         <span style="cursor:pointer;" onclick="sortClientBy('${field}')">${label}</span>
         <button class="col-sort-btn${cSCls(field)}" onclick="sortClientBy('${field}')">↕</button>
@@ -3143,6 +3203,7 @@ function renderClient() {
     ${cH('rate')   ? `<td class="num"><span class="badge b-green">${pct(r.ci,r.rev)}</span></td>` : ''}
     ${cH('cnt')    ? `<td class="num" style="color:var(--gray500);">${r.cnt}건</td>` : ''}
   </tr>`).join('');
+  setupDynColDrag('clientTable');
 }
 
 // ══════════════════════════════════════════════════════
