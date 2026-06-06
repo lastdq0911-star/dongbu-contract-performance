@@ -565,7 +565,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 .ppopup-overlay.show { display: flex; animation: fadeIn .2s ease; }
 .ppopup-box {
   background: #fff; border-radius: 16px; padding: 20px 22px;
-  width: 100%; max-width: 720px; max-height: 86vh; overflow: auto;
+  width: 100%; max-width: 860px; max-height: 86vh; overflow: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
 }
 
@@ -1906,18 +1906,19 @@ function populateYearSelects(){
     if (!_periodInited) el.value = defaultVal;
   };
 
-  // 실적현황: 해당월~해당월
+  // 실적현황: 해당월~해당월 (기존 유지)
   setYearSel('dashY1', curY); setYearSel('dashY2', curY);
   setMonthSel('dashM1', curM); setMonthSel('dashM2', curM);
-  // 협력사별: 해당월~해당월
-  setYearSel('pY1', curY); setYearSel('pY2', curY);
-  setMonthSel('pM1', curM); setMonthSel('pM2', curM);
-  // 고객별: 해당월~해당월
-  setYearSel('cY1', curY); setYearSel('cY2', curY);
-  setMonthSel('cM1', curM); setMonthSel('cM2', curM);
-  // 전체데이터: 해당월~해당월
-  setYearSel('fY1', curY); setYearSel('fY2', curY);
-  setMonthSel('fM1', curM); setMonthSel('fM2', curM);
+  // 협력사별: 전체 기간 (가장 이른 연도 1월 ~ 현재)
+  const minY = String(years[years.length-1] || curY);
+  setYearSel('pY1', minY); setYearSel('pY2', curY);
+  if (!_periodInited) { document.getElementById('pM1').value='1'; document.getElementById('pM2').value=curM; }
+  // 고객별: 전체 기간
+  setYearSel('cY1', minY); setYearSel('cY2', curY);
+  if (!_periodInited) { document.getElementById('cM1').value='1'; document.getElementById('cM2').value=curM; }
+  // 전체데이터: 전체 기간
+  setYearSel('fY1', minY); setYearSel('fY2', curY);
+  if (!_periodInited) { document.getElementById('fM1').value='1'; document.getElementById('fM2').value=curM; }
   _periodInited = true;
   // 배치관리 연도 (전체 옵션 포함)
   const bm=document.getElementById('bmYear');
@@ -2161,13 +2162,13 @@ function openPartnerPopup(name) {
 
   const body = rows.map((r,i)=>`
     <tr style="border-bottom:1px solid var(--gray100);">
-      <td style="padding:6px 8px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
-      <td style="padding:6px 8px;font-weight:700;color:var(--navy);">${r.client}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtMan(r.rev)}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:700;white-space:nowrap;">${fmtMan(r.cost)}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:var(--green);white-space:nowrap;">${fmtMan(r.ci)}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';color:var(--gray500);white-space:nowrap;">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
-      <td style="padding:6px 8px;text-align:right;color:var(--gray400);white-space:nowrap;">${r.cnt}건</td>
+      <td style="padding:5px 6px;font-weight:700;color:var(--gray400);text-align:center;">${i+1}</td>
+      <td style="padding:5px 6px;font-weight:700;color:var(--navy);">${r.client}</td>
+      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtMan(r.rev)}</td>
+      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';font-weight:700;white-space:nowrap;">${fmtMan(r.cost)}</td>
+      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';color:var(--green);white-space:nowrap;">${fmtMan(r.ci)}</td>
+      <td style="padding:5px 6px;text-align:right;font-family:'DM Mono';color:var(--gray500);white-space:nowrap;">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
+      <td style="padding:5px 6px;text-align:right;color:var(--gray400);white-space:nowrap;">${r.cnt}건</td>
     </tr>`).join('');
 
   document.getElementById('partnerPopupTitle').innerHTML =
@@ -2193,15 +2194,15 @@ function openPartnerPopup(name) {
       </div>
     </div>
     <div style="overflow:auto;max-height:50vh;border:1px solid var(--gray200);border-radius:8px;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;">
         <thead><tr style="background:var(--navy);color:#fff;position:sticky;top:0;z-index:1;">
-          <th style="padding:6px 8px;text-align:center;">#</th>
-          <th style="padding:6px 8px;text-align:left;">고객(화주)</th>
-          <th style="padding:6px 8px;text-align:right;">매출</th>
-          <th style="padding:6px 8px;text-align:right;">하불</th>
-          <th style="padding:6px 8px;text-align:right;">공헌이익</th>
-          <th style="padding:6px 8px;text-align:right;">이익률</th>
-          <th style="padding:6px 8px;text-align:right;">건수</th>
+          <th style="padding:5px 6px;text-align:center;white-space:nowrap;">#</th>
+          <th style="padding:5px 6px;text-align:left;">고객(화주)</th>
+          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">매출</th>
+          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">하불</th>
+          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">공헌이익</th>
+          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">이익률</th>
+          <th style="padding:5px 6px;text-align:right;white-space:nowrap;">건수</th>
         </tr></thead>
         <tbody>${body}</tbody>
       </table>
@@ -2294,7 +2295,7 @@ function updateTableDropdowns() {
   if(uploaders.includes(prevU)) selU.value = prevU;
 }
 
-let tableSearched = false; // 조회 버튼을 눌렀는지 여부
+let tableSearched = true; // 탭 진입 시 바로 전체 조회
 
 function doTableSearch() {
   tableSearched = true;
@@ -2314,7 +2315,7 @@ function resetTableFilters() {
   colFilters = {};
   sortField  = ''; sortDir = '';
   document.querySelectorAll('.col-sort-btn').forEach(b=>b.classList.remove('asc','desc'));
-  tableSearched  = false;
+  tableSearched  = true;
   tableShowAll   = false;
   renderTable();
 }
