@@ -1907,18 +1907,23 @@ async function checkAccessAndInit() {
     return;
   }
 
-  // allowed_users 테이블에서 본인 이메일 확인
-  const { data, error } = await _sb.from('allowed_users').select('email').eq('email', sbUser.email).maybeSingle();
+  // allowed_users 테이블에서 본인 이메일 + 역할(role) 확인
+  const { data, error } = await _sb.from('allowed_users').select('email, role').eq('email', sbUser.email).maybeSingle();
 
   if (error || !data) {
     showAccessDenied('접근 권한이 없습니다.\n관리자에게 문의하세요.');
     await _sb.auth.signOut();
     sbUser = null;
+    userRole = 'viewer';
     updateAuthUI();
     return;
   }
 
+  // 역할 저장: 'viewer'(읽기전용) | 'uploader'(업로드가능). 관리자는 항상 uploader 취급
+  userRole = (sbUser.email === ADMIN_EMAIL) ? 'uploader' : (data.role || 'viewer');
+
   hideAccessDenied();
+  updateAuthUI();
   await loadFromSupabase();
 }
 
@@ -2034,8 +2039,10 @@ function saveToStorage() {}
 // AUTH (Supabase 이메일 로그인)
 // ══════════════════════════════════════════════════════
 let _loginCb = null;
+let userRole = 'viewer'; // 'viewer'(읽기전용) | 'uploader'(업로드가능)
 function isAdminUser() { return sbUser?.email === ADMIN_EMAIL; }
 function isLoggedIn()  { return !!sbUser; }
+function canUpload()   { return isAdminUser() || userRole === 'uploader'; }
 
 function toggleLogin() {
   if (sbUser) { if (confirm('로그아웃 하시겠습니까?')) sbLogout(); }
@@ -2100,6 +2107,7 @@ async function sbLogout() {
   } catch (e) { console.warn('[로그아웃] localStorage 정리 실패:', e); }
 
   sbUser = null;
+  userRole = 'viewer';
 
   try { showAccessDenied('로그인이 필요합니다.'); } catch (e) { console.error('[로그아웃] showAccessDenied 오류:', e); }
   try { updateAuthUI(); } catch (e) { console.error('[로그아웃] updateAuthUI 오류:', e); }
@@ -2114,13 +2122,24 @@ function updateAuthUI() {
   const info = document.getElementById('userInfo');
   if (sbUser) {
     btn.textContent = '로그아웃'; btn.classList.add('on');
-    info.textContent = isAdminUser() ? '🔓 관리자' : '👤 '+sbUser.email.split('@')[0];
+    const roleLabel = isAdminUser() ? '🔓 관리자' : (canUpload() ? '📤 업로더' : '👁 뷰어');
+    info.textContent = roleLabel + ' · ' + sbUser.email.split('@')[0];
     info.style.display = '';
   } else {
     btn.textContent = '🔑 로그인'; btn.classList.remove('on');
     info.style.display = 'none';
   }
   if (typeof loadUploaderId === 'function') loadUploaderId();
+
+  // 업로드 메뉴: 업로더(또는 관리자)만 노출
+  const navUpload = document.querySelector('.nav-item[data-view="upload"]');
+  if (navUpload) {
+    navUpload.style.display = canUpload() ? '' : 'none';
+    if (!canUpload() && document.getElementById('view-upload').classList.contains('active')) {
+      goViewByName('dash');
+    }
+  }
+
   // 배치관리 메뉴 & 필터삭제 버튼은 관리자에게만 노출
   const navBatch = document.getElementById('navBatch');
   if (navBatch) {
@@ -2135,11 +2154,12 @@ function updateAuthUI() {
 // 기존 호출 호환용 별칭
 function updateAdminUI() { updateAuthUI(); }
 
-// 업로드: 로그인만 하면 가능
+// 업로드: 업로더 권한(또는 관리자)만 가능
 function requireUploader(cb) {
-  if (isLoggedIn()) { cb(); return; }
+  if (canUpload()) { cb(); return; }
+  if (isLoggedIn()) { toast('⚠ 업로드 권한이 없습니다 (읽기 전용 계정)'); return; }
   toast('⚠ 업로드하려면 로그인이 필요합니다');
-  openLoginModal(cb);
+  openLoginModal(()=>{ if (canUpload()) cb(); else toast('⚠ 업로드 권한이 없는 계정입니다'); });
 }
 // 삭제: 관리자 전용
 function requireAdmin(cb) {
