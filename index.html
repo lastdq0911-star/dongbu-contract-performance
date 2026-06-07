@@ -704,8 +704,7 @@ td.bold { font-weight: 700; color: var(--navy); }
   .sebang-ci-logo img { height: 28px; }
   .header-center h1 { font-size: 13px; }
   .header-center p  { font-size: 9px; display: block; opacity: .75; }
-  /* 모바일: 우측 헤더 버튼 모두 숨김 */
-  .header-right { display: none !important; }
+  /* 모바일: 로그인/로그아웃 버튼은 보이도록 유지 */
 
   /* 모바일: 하단 nav 전체 숨김 */
   .left-nav { display: none !important; }
@@ -1908,11 +1907,12 @@ async function checkAccessAndInit() {
   }
 
   // allowed_users 테이블에서 본인 이메일 + 역할(role) 확인
-  const { data, error } = await _sb.from('allowed_users').select('email, role').eq('email', sbUser.email).maybeSingle();
+  // role 컬럼이 아직 없을 수도 있으므로 '*'로 조회해 방어적으로 처리
+  let { data, error } = await _sb.from('allowed_users').select('*').eq('email', sbUser.email).maybeSingle();
 
   if (error || !data) {
     showAccessDenied('접근 권한이 없습니다.\n관리자에게 문의하세요.');
-    await _sb.auth.signOut();
+    try { _sb.auth.signOut({ scope: 'local' }).catch(()=>{}); } catch(e){}
     sbUser = null;
     userRole = 'viewer';
     updateAuthUI();
