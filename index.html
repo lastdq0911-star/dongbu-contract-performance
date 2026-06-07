@@ -1897,8 +1897,13 @@ let sbUser = null;
 
 // 로그인 여부 + 허용 목록 확인 후 앱 진입
 async function checkAccessAndInit() {
-  const { data: { session } } = await _sb.auth.getSession();
-  sbUser = session?.user || null;
+  // sbUser는 호출자(runAccessCheck)가 이미 세팅함. 비어 있으면 세션에서 보강.
+  if (!sbUser) {
+    try {
+      const { data: { session } } = await _sb.auth.getSession();
+      sbUser = session?.user || null;
+    } catch (e) { console.warn('[접근확인] getSession 실패:', e); }
+  }
   updateAuthUI();
 
   if (!sbUser) {
@@ -2044,6 +2049,41 @@ function isAdminUser() { return sbUser?.email === ADMIN_EMAIL; }
 function isLoggedIn()  { return !!sbUser; }
 function canUpload()   { return isAdminUser() || userRole === 'uploader'; }
 
+// 접근확인 단일 진입점 — 로그인/로그아웃/새로고침/세션변경 모두 이 큐를 통과시켜
+// 동시 실행(레이스 컨디션)을 막는다. 호출자는 반환된 프로미스를 await 해
+// 접근확인이 끝난 뒤의 최종 상태(sbUser/userRole)를 신뢰할 수 있다.
+let _accessChain = Promise.resolve();
+let _lastAccessUid = null; // 마지막으로 접근확인을 마친 사용자 id (중복 재로드 방지)
+function runAccessCheck(user) {
+  _accessChain = _accessChain.then(async () => {
+    try {
+      const uid = user?.id || null;
+      // 동일 사용자에 대한 중복 호출(로그인 시 submitLogin + SIGNED_IN 이벤트 등)은
+      // UI만 갱신하고 데이터 재로드는 생략
+      if (uid && uid === _lastAccessUid) {
+        sbUser = user;
+        updateAuthUI();
+        return;
+      }
+      sbUser = user || null;
+      updateAuthUI();
+      if (sbUser) {
+        await checkAccessAndInit();
+        // 접근거부 시 checkAccessAndInit 내부에서 sbUser=null로 리셋됨
+        _lastAccessUid = sbUser ? uid : null;
+      } else {
+        _lastAccessUid = null;
+        showAccessDenied('로그인이 필요합니다.');
+      }
+      renderBatchList();
+      if (typeof renderBatchManager === 'function') renderBatchManager();
+    } catch (e) {
+      console.error('[접근확인] 오류:', e);
+    }
+  });
+  return _accessChain;
+}
+
 function toggleLogin() {
   if (sbUser) { if (confirm('로그아웃 하시겠습니까?')) sbLogout(); }
   else openLoginModal();
@@ -2076,10 +2116,18 @@ async function submitLogin() {
     const timeoutP = new Promise((_, rej) => setTimeout(() => rej(new Error('응답 시간 초과 — 네트워크 또는 브라우저 보안설정을 확인하세요')), 15000));
     const { data, error } = await Promise.race([loginP, timeoutP]);
     if (error) throw error;
-    sbUser = data.user;
-    updateAuthUI();
+
+    // 접근확인(허용목록/역할 조회)까지 끝난 뒤의 최종 상태로 판단
+    await runAccessCheck(data.user);
+
+    if (!sbUser) {
+      // 인증은 됐지만 허용목록에 없어 접근거부 + 자동 로그아웃된 경우
+      errEl.textContent = '❌ 접근 권한이 없는 계정입니다. 관리자에게 문의하세요.';
+      return;
+    }
+
     closeLoginModal();
-    toast('✓ '+(isAdminUser()?'관리자':'업로더')+'로 로그인되었습니다');
+    toast('✓ '+(isAdminUser()?'관리자':(canUpload()?'업로더':'뷰어'))+'로 로그인되었습니다');
     if (_loginCb) { const cb=_loginCb; _loginCb=null; cb(); }
   } catch(e) {
     errEl.textContent = '❌ '+(e.message||'로그인 실패');
@@ -2108,6 +2156,7 @@ async function sbLogout() {
 
   sbUser = null;
   userRole = 'viewer';
+  _lastAccessUid = null; // 같은 계정으로 재로그인 시 데이터가 다시 로드되도록 초기화
 
   try { showAccessDenied('로그인이 필요합니다.'); } catch (e) { console.error('[로그아웃] showAccessDenied 오류:', e); }
   try { updateAuthUI(); } catch (e) { console.error('[로그아웃] updateAuthUI 오류:', e); }
@@ -4226,30 +4275,14 @@ populateYearSelects();
 renderDash();
 loadUploaderId();
 
-(() => {
-  // 세션 변경 감지 (최초 로드의 INITIAL_SESSION 포함, 로그인/로그아웃 시 접근 재확인)
-  // ※ 별도로 checkAccessAndInit()를 직접 호출하면 최초 로드 시 이 리스너와 동시에
-  //   실행되어 데이터가 중복 로드되거나 화면이 깨지는 레이스 컨디션이 생기므로
-  //   반드시 이 리스너 하나로만 구동한다.
-  let _accessChain = Promise.resolve();
-  _sb.auth.onAuthStateChange((_event, sess) => {
-    _accessChain = _accessChain.then(async () => {
-      try {
-        sbUser = sess?.user || null;
-        updateAuthUI();
-        if (sbUser) {
-          await checkAccessAndInit();
-        } else {
-          showAccessDenied('로그인이 필요합니다.');
-        }
-        renderBatchList();
-        renderBatchManager();
-      } catch (e) {
-        console.error('[접근확인] 오류:', e);
-      }
-    });
-  });
-})();
+// 세션 변경 감지 (최초 로드의 INITIAL_SESSION 포함, 로그인/로그아웃/토큰갱신 시 접근 재확인)
+// ※ 모든 접근확인은 runAccessCheck 큐 하나로만 구동 — checkAccessAndInit을 직접
+//   호출하지 않는다. 그래야 새로고침 시 동시 실행으로 화면이 깨지지 않는다.
+_sb.auth.onAuthStateChange((event, sess) => {
+  // TOKEN_REFRESHED는 사용자/권한이 그대로이므로 전체 재확인/데이터 재로드 불필요
+  if (event === 'TOKEN_REFRESHED' && sbUser) return;
+  runAccessCheck(sess?.user || null);
+});
 </script>
 </body>
 </html>
