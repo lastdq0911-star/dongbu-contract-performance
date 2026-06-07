@@ -835,7 +835,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 
 <!-- ══ APP BODY ═════════════════════════════════════════ -->
-<div class="app-body">
+<div class="app-body" style="display:none;">
 
 <!-- ══ LEFT NAV ════════════════════════════════════════ -->
 <nav class="left-nav">
@@ -1507,6 +1507,22 @@ td.bold { font-weight: 700; color: var(--navy); }
 
 <div id="toast"></div>
 
+<!-- ══ 접근 거부 화면 ════════════════════════════════════ -->
+<div id="accessDeniedScreen" style="display:none;position:fixed;inset:0;z-index:9000;
+  background:var(--navy);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:32px 24px;
+    background:rgba(255,255,255,.06);border-radius:20px;max-width:360px;width:90%;text-align:center;">
+    <img src="sebang_ci_white.svg" style="height:36px;opacity:.9;" alt="SEBANG CI">
+    <div style="font-size:32px;">🔐</div>
+    <div id="accessDeniedMsg" style="font-size:15px;font-weight:700;color:#fff;white-space:pre-line;line-height:1.6;"></div>
+    <button onclick="openLoginModal()" style="margin-top:4px;padding:12px 32px;background:var(--teal);
+      border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;width:100%;">
+      🔑 로그인
+    </button>
+  </div>
+  <div style="font-size:11px;color:rgba(255,255,255,.35);">동부계약관리팀 · 하불실적관리</div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════
 // STATE
@@ -1853,6 +1869,42 @@ const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const ADMIN_EMAIL = 'lastdq0911@gmail.com';
 const _sb = supabase.createClient(SB_URL, SB_ANON);
 let sbUser = null;
+
+// 로그인 여부 + 허용 목록 확인 후 앱 진입
+async function checkAccessAndInit() {
+  const { data: { session } } = await _sb.auth.getSession();
+  sbUser = session?.user || null;
+  updateAuthUI();
+
+  if (!sbUser) {
+    showAccessDenied('로그인이 필요합니다.');
+    return;
+  }
+
+  // allowed_users 테이블에서 본인 이메일 확인
+  const { data, error } = await _sb.from('allowed_users').select('email').eq('email', sbUser.email).maybeSingle();
+  if (error || !data) {
+    showAccessDenied('접근 권한이 없습니다.\n관리자에게 문의하세요.');
+    await _sb.auth.signOut();
+    sbUser = null;
+    updateAuthUI();
+    return;
+  }
+
+  hideAccessDenied();
+  await loadFromSupabase();
+}
+
+function showAccessDenied(msg) {
+  document.getElementById('accessDeniedScreen').style.display = 'flex';
+  document.getElementById('accessDeniedMsg').textContent = msg;
+  // 메인 콘텐츠 숨김
+  document.querySelector('.app-body').style.display = 'none';
+}
+function hideAccessDenied() {
+  document.getElementById('accessDeniedScreen').style.display = 'none';
+  document.querySelector('.app-body').style.display = '';
+}
 
 // 한국어 필드 → DB 컬럼
 function rowToDb(r) {
@@ -4105,21 +4157,20 @@ renderDash();
 loadUploaderId();
 
 (async () => {
-  // 이전 로그인 세션 복원
-  const { data: { session } } = await _sb.auth.getSession();
-  sbUser = session?.user || null;
-  updateAuthUI();
-
-  // 세션 변경 감지 (로그인/로그아웃 시 UI 갱신)
-  _sb.auth.onAuthStateChange((_event, sess) => {
+  // 세션 변경 감지 (로그인 시 접근 재확인)
+  _sb.auth.onAuthStateChange(async (_event, sess) => {
     sbUser = sess?.user || null;
     updateAuthUI();
+    if (sbUser) {
+      await checkAccessAndInit();
+    } else {
+      showAccessDenied('로그인이 필요합니다.');
+    }
     renderBatchList();
     renderBatchManager();
   });
 
-  // Supabase에서 전체 데이터 로드
-  await loadFromSupabase();
+  await checkAccessAndInit();
 })();
 </script>
 </body>
