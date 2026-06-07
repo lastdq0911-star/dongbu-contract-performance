@@ -2815,11 +2815,9 @@ function openPartnerPopup(name) {
   const tCi   = tRev - tCost;
   const tCnt  = rows.reduce((s,r)=>s+r.cnt,0);
   const maxCost = Math.max(...rows.map(r=>r.cost), 1);
-  // 모바일에서는 공헌이익을 백만원 단위로 표시
-  const isMobile = window.innerWidth <= 640;
+  // 공헌이익은 웹·모바일 모두 백만원 단위로 표시
   const fmtCi = n => {
     if (!n && n!==0) return '—';
-    if (!isMobile) return fmtEok(n);
     return Math.round(n/1e6).toLocaleString('ko-KR')+'백만';
   };
 
