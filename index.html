@@ -2137,6 +2137,19 @@ function openLoginModal(cb) {
 function closeLoginModal() {
   document.getElementById('loginModal').classList.remove('show');
   _loginCb = null;
+  // 입력창 포커스 해제 + 화면 배율 원복 (모바일에서 입력 시 확대된 채 남는 문제)
+  try { document.activeElement && document.activeElement.blur(); } catch(e){}
+  resetViewportZoom();
+}
+
+// 모바일(특히 iOS Safari)에서 입력창 포커스로 확대된 화면을 1배율로 되돌린다.
+// maximum-scale을 잠깐 걸었다가 즉시 풀어 손가락 확대(pinch-zoom)는 계속 가능하게 유지.
+function resetViewportZoom() {
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) return;
+  const base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+  vp.setAttribute('content', base + ', maximum-scale=1.0');
+  setTimeout(() => vp.setAttribute('content', base), 350);
 }
 
 // SDK의 signInWithPassword가 추적방지/잠금 환경에서 hang되는 문제를 피하기 위해
