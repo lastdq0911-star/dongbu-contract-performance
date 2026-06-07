@@ -704,7 +704,8 @@ td.bold { font-weight: 700; color: var(--navy); }
   .sebang-ci-logo img { height: 28px; }
   .header-center h1 { font-size: 13px; }
   .header-center p  { font-size: 9px; display: block; opacity: .75; }
-  /* 모바일: 로그인/로그아웃 버튼은 보이도록 유지 */
+  /* 모바일: 로그인/로그아웃 버튼만 표시하고 사용자정보(역할·아이디) 텍스트는 숨김 */
+  .header-right #userInfo { display: none !important; }
 
   /* 모바일: 하단 nav 전체 숨김 */
   .left-nav { display: none !important; }
