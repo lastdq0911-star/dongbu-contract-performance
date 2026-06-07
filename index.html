@@ -2054,14 +2054,15 @@ async function submitLogin() {
 
 async function sbLogout() {
   console.log('[로그아웃] 시작');
-  // scope:'local' — 서버 요청 없이 로컬 세션만 제거 (404 등 서버 오류 영향 없음)
+  // signOut을 await하지 않음 — Edge 추적방지 등으로 storage 접근이 막히면
+  // signOut 내부가 hang되어 이후 코드가 실행되지 않으므로 fire-and-forget 처리
   try {
-    await _sb.auth.signOut({ scope: 'local' });
-    console.log('[로그아웃] signOut 완료');
+    _sb.auth.signOut({ scope: 'local' }).catch(e => console.warn('[로그아웃] signOut 비동기 실패(무시):', e));
   } catch (e) {
-    console.warn('[로그아웃] signOut 실패(무시):', e);
+    console.warn('[로그아웃] signOut 호출 실패(무시):', e);
   }
-  // 혹시 모를 잔여 토큰까지 강제 제거
+
+  // 잔여 토큰 강제 제거 (이것이 실질적 로그아웃)
   try {
     Object.keys(localStorage)
       .filter(k => k.startsWith('sb-') || k.includes('supabase'))
@@ -2071,17 +2072,12 @@ async function sbLogout() {
 
   sbUser = null;
 
-  try { showAccessDenied('로그인이 필요합니다.'); console.log('[로그아웃] 차단화면 표시 완료'); }
-  catch (e) { console.error('[로그아웃] showAccessDenied 오류:', e); }
-
-  try { updateAuthUI(); console.log('[로그아웃] UI 갱신 완료'); }
-  catch (e) { console.error('[로그아웃] updateAuthUI 오류:', e); }
-
-  try { renderBatchList(); }
-  catch (e) { console.error('[로그아웃] renderBatchList 오류:', e); }
+  try { showAccessDenied('로그인이 필요합니다.'); } catch (e) { console.error('[로그아웃] showAccessDenied 오류:', e); }
+  try { updateAuthUI(); } catch (e) { console.error('[로그아웃] updateAuthUI 오류:', e); }
+  try { renderBatchList(); } catch (e) { console.error('[로그아웃] renderBatchList 오류:', e); }
 
   toast('로그아웃 되었습니다');
-  console.log('[로그아웃] 전체 완료, sbUser =', sbUser);
+  console.log('[로그아웃] 완료, sbUser =', sbUser);
 }
 
 function updateAuthUI() {
