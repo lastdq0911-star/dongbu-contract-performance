@@ -1928,9 +1928,45 @@ async function checkAccessAndInit() {
   // 역할 저장: 'viewer'(읽기전용) | 'uploader'(업로드가능). 관리자는 항상 uploader 취급
   userRole = (sbUser.email === ADMIN_EMAIL) ? 'uploader' : (data.role || 'viewer');
 
+  // IP 제한: 관리자는 무조건 통과. 그 외 계정은 allowed_ips가 "등록되어 있을 때만" 검사.
+  // (allowed_ips 미등록 계정은 제한 없음 → 잠금 사고 방지, 점진적 적용 가능)
+  if (sbUser.email !== ADMIN_EMAIL && Array.isArray(data.allowed_ips) && data.allowed_ips.length > 0) {
+    const allowed = await _isClientIpAllowed(data.allowed_ips);
+    if (!allowed) {
+      showAccessDenied('등록되지 않은 위치(IP)에서의 접속입니다.\n회사 네트워크에서 접속하거나 관리자에게 문의하세요.');
+      try { _sb.auth.signOut({ scope: 'local' }).catch(()=>{}); } catch(e){}
+      sbUser = null;
+      userRole = 'viewer';
+      updateAuthUI();
+      return;
+    }
+  }
+
   hideAccessDenied();
   updateAuthUI();
   await loadFromSupabase();
+}
+
+// 현재 접속자의 공인 IP를 조회 (6초 타임아웃)
+async function _getClientIp() {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const r = await fetch('https://api.ipify.org?format=json', { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(t);
+    const j = await r.json();
+    return j.ip || null;
+  } catch (e) { clearTimeout(t); return null; }
+}
+
+// 등록된 허용 IP 목록과 현재 IP를 대조. IP 조회 실패 시에는 차단하지 않음
+// (네트워크 일시 오류로 정상 사용자가 잠기는 것을 방지 — 계정 게이트로 1차 보호됨)
+async function _isClientIpAllowed(list) {
+  const ip = await _getClientIp();
+  if (!ip) { console.warn('[IP확인] 현재 IP 조회 실패 — 검사 생략'); return true; }
+  const ok = list.map(s => String(s).trim()).includes(ip);
+  if (!ok) console.warn('[IP확인] 미등록 IP:', ip);
+  return ok;
 }
 
 function showAccessDenied(msg) {
