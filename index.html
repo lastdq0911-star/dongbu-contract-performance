@@ -1867,7 +1867,33 @@ function upBadge() { /* recBadge removed */ }
 const SB_URL      = 'https://qmtwrdqwnuwhosieupaq.supabase.co';
 const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtdHdyZHF3bnV3aG9zaWV1cGFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDY0MDcsImV4cCI6MjA5NjIyMjQwN30.9fSUnYpEAbqUQre4wNUcSUlFzox220DACGUc-xXmt14';
 const ADMIN_EMAIL = 'lastdq0911@gmail.com';
-const _sb = supabase.createClient(SB_URL, SB_ANON);
+
+// 추적방지(Tracking Prevention) 등으로 localStorage가 막힐 때를 대비한 안전 저장소
+// localStorage 접근 실패 시 메모리 저장소로 자동 대체 → 로그인/로그아웃 hang 방지
+const _memStore = {};
+const _safeStorage = {
+  getItem(k) {
+    try { return localStorage.getItem(k); } catch (e) { return (k in _memStore) ? _memStore[k] : null; }
+  },
+  setItem(k, v) {
+    try { localStorage.setItem(k, v); } catch (e) { _memStore[k] = String(v); }
+  },
+  removeItem(k) {
+    try { localStorage.removeItem(k); } catch (e) {}
+    delete _memStore[k];
+  }
+};
+
+const _sb = supabase.createClient(SB_URL, SB_ANON, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    storage: _safeStorage,
+    // navigator.locks가 추적방지에 막혀 hang되는 것 방지 — 잠금 없이 즉시 실행
+    lock: async (name, acquireTimeout, fn) => await fn()
+  }
+});
 let sbUser = null;
 
 // 로그인 여부 + 허용 목록 확인 후 앱 진입
@@ -2038,7 +2064,10 @@ async function submitLogin() {
   if (!email || !pw) { errEl.textContent = '이메일과 비밀번호를 입력하세요'; return; }
   btn.textContent = '로그인 중...'; btn.disabled = true;
   try {
-    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pw });
+    // 15초 내 응답 없으면 타임아웃 처리 (네트워크/브라우저 차단 대비)
+    const loginP = _sb.auth.signInWithPassword({ email, password: pw });
+    const timeoutP = new Promise((_, rej) => setTimeout(() => rej(new Error('응답 시간 초과 — 네트워크 또는 브라우저 보안설정을 확인하세요')), 15000));
+    const { data, error } = await Promise.race([loginP, timeoutP]);
     if (error) throw error;
     sbUser = data.user;
     updateAuthUI();
