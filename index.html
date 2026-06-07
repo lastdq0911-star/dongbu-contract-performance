@@ -1881,25 +1881,10 @@ async function checkAccessAndInit() {
     return;
   }
 
-  // 관리자는 항상 통과
-  if (sbUser.email === ADMIN_EMAIL) {
-    hideAccessDenied();
-    await loadFromSupabase();
-    return;
-  }
-
   // allowed_users 테이블에서 본인 이메일 확인
   const { data, error } = await _sb.from('allowed_users').select('email').eq('email', sbUser.email).maybeSingle();
 
-  // 테이블이 아직 없으면(오류) 로그인된 사용자는 일단 허용
-  if (error) {
-    console.warn('allowed_users 조회 오류 (테이블 미생성 가능성):', error.message);
-    hideAccessDenied();
-    await loadFromSupabase();
-    return;
-  }
-
-  if (!data) {
+  if (error || !data) {
     showAccessDenied('접근 권한이 없습니다.\n관리자에게 문의하세요.');
     await _sb.auth.signOut();
     sbUser = null;
