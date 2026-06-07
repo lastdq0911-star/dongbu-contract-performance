@@ -2206,6 +2206,17 @@ async function submitLogin() {
 
 async function sbLogout() {
   console.log('[로그아웃] 시작');
+
+  // 열려 있는 팝업/모달을 모두 닫음 — 안 닫으면 재로그인 후에도 화면 위에 남아
+  // 화면이 확대되어 보이거나(오버레이 잔존) 새 데이터 대신 옛 데이터가 보이는 문제 발생
+  try {
+    document.getElementById('partnerPopup')?.classList.remove('show');
+    document.getElementById('chartPopupOverlay') && (document.getElementById('chartPopupOverlay').style.display = 'none');
+    document.getElementById('colFilterPopup')?.classList.remove('show');
+    document.getElementById('loginModal')?.classList.remove('show');
+    document.querySelectorAll('.modal-overlay.show, .col-vis-popup.show').forEach(el => el.classList.remove('show'));
+  } catch (e) { console.warn('[로그아웃] 팝업 정리 실패:', e); }
+
   // signOut을 await하지 않음 — Edge 추적방지 등으로 storage 접근이 막히면
   // signOut 내부가 hang되어 이후 코드가 실행되지 않으므로 fire-and-forget 처리
   try {
