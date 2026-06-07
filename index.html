@@ -2117,18 +2117,18 @@ async function submitLogin() {
     const { data, error } = await Promise.race([loginP, timeoutP]);
     if (error) throw error;
 
-    // 접근확인(허용목록/역할 조회)까지 끝난 뒤의 최종 상태로 판단
-    await runAccessCheck(data.user);
-
-    if (!sbUser) {
-      // 인증은 됐지만 허용목록에 없어 접근거부 + 자동 로그아웃된 경우
-      errEl.textContent = '❌ 접근 권한이 없는 계정입니다. 관리자에게 문의하세요.';
-      return;
-    }
-
+    // 인증 성공 — 모달은 즉시 닫고 접근확인/데이터 로드는 백그라운드로 진행.
+    // (데이터 로드가 느려도 로그인 버튼이 "로그인 중..."에 멈추지 않도록 분리)
     closeLoginModal();
-    toast('✓ '+(isAdminUser()?'관리자':(canUpload()?'업로더':'뷰어'))+'로 로그인되었습니다');
-    if (_loginCb) { const cb=_loginCb; _loginCb=null; cb(); }
+    toast('✓ 로그인되었습니다');
+
+    // 접근확인은 백그라운드 큐에서 진행되며 UI(역할/메뉴/데이터)를 갱신함.
+    // 콜백(_loginCb: 업로드 등)이 있으면 접근확인 완료 후 권한 재평가하여 실행
+    const cb = _loginCb; _loginCb = null;
+    runAccessCheck(data.user).then(() => {
+      if (!sbUser) { toast('⚠ 접근 권한이 없는 계정입니다. 관리자에게 문의하세요.'); return; }
+      if (cb) cb();
+    });
   } catch(e) {
     errEl.textContent = '❌ '+(e.message||'로그인 실패');
   } finally {
