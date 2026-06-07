@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="하불실적관리">
@@ -704,57 +704,21 @@ td.bold { font-weight: 700; color: var(--navy); }
   .sebang-ci-logo img { height: 28px; }
   .header-center h1 { font-size: 13px; }
   .header-center p  { font-size: 9px; display: block; opacity: .75; }
-  .header-right #userInfo { display: none !important; }
+  /* 모바일: 우측 헤더 버튼 모두 숨김 */
+  .header-right { display: none !important; }
 
-  /* 모바일: 실적현황(dash)만 노출, 나머지 nav 숨김 */
-  .nav-item[data-view="partner"],
-  .nav-item[data-view="client"],
-  .nav-item[data-view="table"],
-  .nav-item[data-view="upload"] { display: none !important; }
-  .admin-btn { font-size: 11px; padding: 5px 8px; }
+  /* 모바일: 하단 nav 전체 숨김 */
+  .left-nav { display: none !important; }
 
-  /* 좌측 네비 → 하단 고정 탭바로 전환 */
-  .left-nav {
-    position: fixed;
-    left: 0; right: 0; bottom: 0; top: auto !important;
-    width: 100% !important;
-    height: 56px;
-    flex-direction: row;
-    padding: 0;
-    border-right: none;
-    border-top: 1px solid rgba(255,255,255,.12);
-    z-index: 300;
-    overflow: hidden;
-    overflow-y: hidden;
-    box-shadow: 0 -2px 12px rgba(0,0,0,.25);
-  }
-  .left-nav-logo { display: none; }
-  .nav-item {
-    flex: 1;
-    flex-direction: column;
-    padding: 6px 2px 4px;
-    font-size: 9px;
-    gap: 2px;
-    border-radius: 0;
-    border-left: none;
-    border-bottom: 3px solid transparent;
-    justify-content: center;
-    align-items: center;
-    min-width: 0;
-  }
-  .nav-item.active {
-    background: rgba(255,255,255,.1);
-    border-left: none;
-    border-bottom: 3px solid var(--teal);
-  }
-  .nav-item .ni { font-size: 18px; line-height: 1; }
+  /* 크게보기 버튼 모바일에서 숨김 */
+  #chartExpandBtn { display: none !important; }
 
-  /* 메인 영역: 좌측 마진 제거, 하단 탭바 높이만큼 여백 */
+  /* 메인 영역: 좌측 마진 제거, 하단 여백 없음 */
   .main-wrap {
     margin-left: 0;
-    max-width: 100% !important;   /* 데스크톱 calc(100% - 180px) 해제 */
+    max-width: 100% !important;
     width: 100%;
-    padding: 12px 12px 68px;
+    padding: 12px 12px 24px;
   }
 
   /* 실적현황 뷰: 가로 flex → 세로, 고정 높이 해제 → 자연 스크롤 */
@@ -2611,6 +2575,13 @@ function openPartnerPopup(name) {
   const tCi   = tRev - tCost;
   const tCnt  = rows.reduce((s,r)=>s+r.cnt,0);
   const maxCost = Math.max(...rows.map(r=>r.cost), 1);
+  // 모바일에서는 공헌이익을 백만원 단위로 표시
+  const isMobile = window.innerWidth <= 640;
+  const fmtCi = n => {
+    if (!n && n!==0) return '—';
+    if (!isMobile) return fmtEok(n);
+    return Math.round(n/1e6).toLocaleString('ko-KR')+'백만';
+  };
 
   const ciRate = tRev ? (tCi/tRev*100).toFixed(1)+'%' : '—';
 
@@ -2620,7 +2591,7 @@ function openPartnerPopup(name) {
       <td style="padding:6px 6px;font-weight:700;color:var(--navy);word-break:keep-all;">${r.client}</td>
       <td style="padding:6px 6px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmtEok(r.rev)}</td>
       <td style="padding:6px 6px;text-align:right;font-family:'DM Mono';font-weight:700;color:var(--gold);white-space:nowrap;">${fmtEok(r.cost)}</td>
-      <td style="padding:6px 6px;text-align:right;font-family:'DM Mono';color:${r.ci>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtEok(r.ci)}</td>
+      <td style="padding:6px 6px;text-align:right;font-family:'DM Mono';color:${r.ci>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtCi(r.ci)}</td>
       <td style="padding:6px 6px;text-align:right;font-family:'DM Mono';color:var(--gray500);white-space:nowrap;">${r.rev?((r.ci/r.rev*100).toFixed(1)+'%'):'—'}</td>
     </tr>`).join('');
 
@@ -2629,7 +2600,7 @@ function openPartnerPopup(name) {
       <td colspan="2" style="padding:7px 6px;font-weight:800;color:var(--navy);">합계</td>
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmtEok(tRev)}</td>
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--gold);white-space:nowrap;">${fmtEok(tCost)}</td>
-      <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtEok(tCi)}</td>
+      <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtCi(tCi)}</td>
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--gray500);white-space:nowrap;">${ciRate}</td>
     </tr>`;
 
@@ -2651,7 +2622,7 @@ function openPartnerPopup(name) {
       </div>
       <div style="flex:1;min-width:80px;background:var(--green-l);border-radius:8px;padding:8px 10px;">
         <div style="font-size:11px;color:var(--gray500);">공헌이익</div>
-        <div class="kv" style="font-size:15px;font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtEok(tCi)}</div>
+        <div class="kv" style="font-size:15px;font-weight:800;color:${tCi>=0?'var(--green)':'var(--red)'};white-space:nowrap;">${fmtCi(tCi)}</div>
         <div class="ks" style="font-size:10px;color:var(--gray400);margin-top:1px;white-space:nowrap;">${ciRate}</div>
       </div>
     </div>
