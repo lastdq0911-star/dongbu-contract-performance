@@ -1475,7 +1475,7 @@ td.bold { font-weight: 700; color: var(--navy); }
 <div class="modal-overlay" id="loginModal">
   <div class="modal-box">
     <div class="modal-title">🔑 로그인</div>
-    <div class="modal-sub">업로드·삭제는 로그인이 필요합니다 (조회는 누구나 가능)</div>
+    <div class="modal-sub">로그인 후 데이터를 조회할 수 있습니다</div>
     <input type="email" class="modal-inp" id="loginEmail" placeholder="이메일"
            style="letter-spacing:0;text-align:left;font-size:14px;margin-bottom:8px;"
            onkeydown="if(event.key==='Enter')document.getElementById('loginPw').focus()">
@@ -1881,9 +1881,25 @@ async function checkAccessAndInit() {
     return;
   }
 
+  // 관리자는 항상 통과
+  if (sbUser.email === ADMIN_EMAIL) {
+    hideAccessDenied();
+    await loadFromSupabase();
+    return;
+  }
+
   // allowed_users 테이블에서 본인 이메일 확인
   const { data, error } = await _sb.from('allowed_users').select('email').eq('email', sbUser.email).maybeSingle();
-  if (error || !data) {
+
+  // 테이블이 아직 없으면(오류) 로그인된 사용자는 일단 허용
+  if (error) {
+    console.warn('allowed_users 조회 오류 (테이블 미생성 가능성):', error.message);
+    hideAccessDenied();
+    await loadFromSupabase();
+    return;
+  }
+
+  if (!data) {
     showAccessDenied('접근 권한이 없습니다.\n관리자에게 문의하세요.');
     await _sb.auth.signOut();
     sbUser = null;
