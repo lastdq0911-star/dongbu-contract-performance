@@ -1731,7 +1731,18 @@ function _setupRateCombo(inputId, boxId, getOptions) {
   const input = document.getElementById(inputId);
   const box   = document.getElementById(boxId);
   if (!input || !box) return;
+  // filter-row가 overflow:auto라 절대좌표 드롭다운이 잘려 보이므로,
+  // body로 옮겨 position:fixed로 입력창 바로 아래에 띄운다
+  document.body.appendChild(box);
+  box.style.position = 'fixed';
+  const reposition = () => {
+    const r = input.getBoundingClientRect();
+    box.style.left  = r.left + 'px';
+    box.style.top   = (r.bottom + 4) + 'px';
+    box.style.width = Math.max(r.width, 180) + 'px';
+  };
   const renderList = () => {
+    reposition();
     const q = input.value.trim().toLowerCase();
     const opts = getOptions();
     const list = (q ? opts.filter(v => v.toLowerCase().includes(q)) : opts).slice(0, 50);
@@ -1745,6 +1756,8 @@ function _setupRateCombo(inputId, boxId, getOptions) {
   input.addEventListener('focus', renderList);
   input.addEventListener('input', renderList);
   input.addEventListener('blur', () => setTimeout(() => { box.style.display = 'none'; }, 150));
+  window.addEventListener('scroll', () => { if (box.style.display === 'block') reposition(); }, true);
+  window.addEventListener('resize', () => { if (box.style.display === 'block') reposition(); });
   box.addEventListener('mousedown', e => {
     const opt = e.target.closest('.opt');
     if (!opt) return;
