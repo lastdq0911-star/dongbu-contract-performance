@@ -1402,7 +1402,12 @@ td.bold { font-weight: 700; color: var(--navy); }
   <div class="view" id="view-rate">
     <div style="margin-bottom:16px;">
       <div class="page-title">구간 단가 분석</div>
-      <div class="page-sub" id="rateSub">벌크운송 · 출발지·도착지·톤급이 같은 건의 하불 단가(원/톤) 최저·최고·평균</div>
+      <div class="page-sub" id="rateSub">벌크운송 · 같은 구간(출발지·도착지)·톤급의 톤당 단가(하불금액 ÷ 중량) 최저가·최고가·평균가 비교</div>
+    </div>
+
+    <div style="margin-bottom:10px;position:relative;display:inline-block;">
+      <button onclick="toggleRateBrowse()" style="border:1.5px solid var(--teal);background:var(--teal-ll);color:var(--teal-d);border-radius:var(--radius-xs);padding:7px 14px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;">📋 데이터 보유 구간 둘러보기</button>
+      <div id="rateBrowseBox" class="rate-combo-box" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:320px;max-height:320px;"></div>
     </div>
 
     <div class="filter-row" style="position:relative;">
@@ -1448,7 +1453,8 @@ style="min-width:100px;">
     </div>
 
     <div id="rateEmpty" style="text-align:center;padding:48px 16px;color:var(--gray400);font-size:13px;">
-      출발지·도착지를 검색·선택한 뒤 [조회] 버튼을 눌러주세요 (톤급·기간을 비워두면 전체 결과를 볼 수 있습니다)
+      출발지·도착지를 검색·선택한 뒤 [조회] 버튼을 눌러주세요 (톤급·기간을 비워두면 전체 결과를 볼 수 있습니다)<br>
+      <span style="font-size:12px;">어떤 구간에 데이터가 있는지 모르겠다면 위의 <strong style="color:var(--teal-d);">[📋 데이터 보유 구간 둘러보기]</strong>를 눌러 목록에서 골라보세요</span>
     </div>
 
     <div id="rateResultCard" style="display:none;">
@@ -1458,15 +1464,15 @@ style="min-width:100px;">
           <div id="rateCnt" style="font-size:18px;font-weight:800;color:var(--navy);margin-top:2px;">—</div>
         </div>
         <div style="flex:1;min-width:110px;background:var(--teal-ll);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저 단가</div>
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저가 (원/톤)</div>
           <div id="rateMin" style="font-size:18px;font-weight:800;color:var(--teal-d);margin-top:2px;white-space:nowrap;">—</div>
         </div>
         <div style="flex:1;min-width:110px;background:var(--gold-l);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고 단가</div>
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고가 (원/톤)</div>
           <div id="rateMax" style="font-size:18px;font-weight:800;color:var(--gold);margin-top:2px;white-space:nowrap;">—</div>
         </div>
         <div style="flex:1;min-width:110px;background:var(--green-l);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균 단가</div>
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균가 (원/톤)</div>
           <div id="rateAvg" style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px;white-space:nowrap;">—</div>
         </div>
       </div>
@@ -1750,16 +1756,66 @@ function _rateTh(label, field, align){
 }
 
 function populateRateSelects(){
-  const bulk = allData.filter(r => r['용역구분']==='벌크운송');
-  _rateOpts.from = [...new Set(bulk.map(r=>r['출발지']).filter(Boolean))].sort();
-  _rateOpts.to   = [...new Set(bulk.map(r=>r['도착지']).filter(Boolean))].sort();
-  _rateOpts.ton  = [...new Set(bulk.map(r=>r['톤급']).filter(Boolean))].sort();
+  // 단가 분석이 가능한 건(하불·중량 모두 있는 벌크운송)만 후보로 사용
+  // → "데이터 없음" 옵션이 검색에 뜨는 것을 방지
+  const valid = allData.filter(r => {
+    if (r['용역구분'] !== '벌크운송') return false;
+    const cost = +r['하불(원)'] || 0;
+    const weight = parseFloat(r['중량']);
+    return cost > 0 && weight > 0;
+  });
+  _rateOpts.from = [...new Set(valid.map(r=>r['출발지']).filter(Boolean))].sort();
+  _rateOpts.to   = [...new Set(valid.map(r=>r['도착지']).filter(Boolean))].sort();
+  _rateOpts.ton  = [...new Set(valid.map(r=>r['톤급']).filter(Boolean))].sort();
+
+  // 데이터가 있는 구간 조합 목록 (검색이 막막할 때 둘러볼 수 있도록)
+  const map = {};
+  valid.forEach(r=>{
+    const from=r['출발지']||'', to=r['도착지']||'', ton=r['톤급']||'';
+    if(!from || !to || !ton) return;
+    const key = from+'|'+to+'|'+ton;
+    if(!map[key]) map[key]={from,to,ton,cnt:0};
+    map[key].cnt++;
+  });
+  _rateCombos = Object.values(map).sort((a,b)=>b.cnt-a.cnt);
+
   if (!_rateComboInit) {
     _setupRateCombo('rateFrom', 'rateFromBox', () => _rateOpts.from);
     _setupRateCombo('rateTo',   'rateToBox',   () => _rateOpts.to);
     _setupRateCombo('rateTon',  'rateTonBox',  () => _rateOpts.ton);
+    document.addEventListener('mousedown', e => {
+      const box = document.getElementById('rateBrowseBox');
+      if (box && box.style.display === 'block' && !e.target.closest('#rateBrowseBox') && !e.target.closest('button[onclick="toggleRateBrowse()"]')) {
+        box.style.display = 'none';
+      }
+    });
     _rateComboInit = true;
   }
+}
+
+let _rateCombos = []; // [{from,to,ton,cnt}] — 데이터가 있는 구간 목록
+function toggleRateBrowse(){
+  const box = document.getElementById('rateBrowseBox');
+  if (!box) return;
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  if (!_rateCombos.length) {
+    box.innerHTML = '<div style="padding:14px;color:var(--gray400);font-size:12px;">데이터가 있는 구간이 없습니다</div>';
+  } else {
+    box.innerHTML = _rateCombos.slice(0, 100).map(c => `
+      <div class="opt" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"
+        onmousedown="event.preventDefault();pickRateCombo('${c.from.replace(/'/g,"\\'")}','${c.to.replace(/'/g,"\\'")}','${c.ton.replace(/'/g,"\\'")}')">
+        <span>🚛 ${c.from} → ${c.to} <span style="color:var(--teal-d);font-weight:700;">· ${c.ton}</span></span>
+        <span style="font-size:11px;color:var(--gray400);white-space:nowrap;">${c.cnt}건</span>
+      </div>`).join('');
+  }
+  box.style.display = 'block';
+}
+function pickRateCombo(from, to, ton){
+  document.getElementById('rateFrom').value = from;
+  document.getElementById('rateTo').value   = to;
+  document.getElementById('rateTon').value  = ton;
+  document.getElementById('rateBrowseBox').style.display = 'none';
+  renderRateAnalysis();
 }
 
 // 검색 가능한 콤보박스: 입력하면 옵션 목록을 필터링해 보여주고,
@@ -1899,7 +1955,7 @@ function renderRateAnalysis(){
 
   const periodTxt = hasPeriod ? ` · ${periodLabel(y1,m1,y2,m2)}` : ' · 전체 기간';
   document.getElementById('rateSub').textContent =
-    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'}${periodTxt} · 매칭 ${items.length}건 (하불 ÷ 중량 기준)`;
+    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'}${periodTxt} · 매칭 ${items.length}건 · 톤당 단가 = 하불금액 ÷ 중량(톤)`;
   document.getElementById('rateCnt').textContent = items.length + '건';
   document.getElementById('rateMin').textContent = fmt(Math.round(minU)) + '원/톤';
   document.getElementById('rateMax').textContent = fmt(Math.round(maxU)) + '원/톤';
@@ -3526,14 +3582,14 @@ function renderTable() {
   </tr>`).join('');
   if(!tableShowAll && data.length > 200) {
     tb.innerHTML += `<tr><td colspan="16" style="text-align:center;padding:14px;">
-      <button onclick="tableShowAll=true;doTableSearch();" style="border:none;border-radius:8px;background:var(--teal);color:#fff;padding:9px 28px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
+      <button onclick="tableShowAll=true;renderTable();" style="border:none;border-radius:8px;background:var(--teal);color:#fff;padding:9px 28px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
         📋 전체 보기 (${data.length}건 모두 표시)
       </button>
       <div style="font-size:11px;color:var(--gray400);margin-top:6px;">현재 200건 표시 중</div>
     </td></tr>`;
   } else if(tableShowAll && data.length > 200) {
     tb.innerHTML += `<tr><td colspan="16" style="text-align:center;padding:10px;">
-      <button onclick="tableShowAll=false;doTableSearch();" style="border:none;border-radius:8px;background:var(--gray100);color:var(--gray500);padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+      <button onclick="tableShowAll=false;renderTable();" style="border:none;border-radius:8px;background:var(--gray100);color:var(--gray500);padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
         접기 (200건으로 줄이기)
       </button>
     </td></tr>`;
