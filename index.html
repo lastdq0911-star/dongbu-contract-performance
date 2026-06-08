@@ -1426,10 +1426,29 @@ td.bold { font-weight: 700; color: var(--navy); }
       </div>
       <button onclick="renderRateAnalysis()" style="border:none;background:var(--teal);color:#fff;border-radius:var(--radius-xs);padding:7px 16px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;">조회</button>
       <button onclick="resetRateFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
+      <div class="fsep"></div>
+      <label>기간 <span style="color:var(--gray400);font-weight:400;">(미입력시 전체)</span></label>
+      <select class="fsel" id="rateY1"></select>
+      <select class="fsel" id="rateM1">
+        <option value="" selected>—</option>
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+        <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+      </select>
+      <span style="color:var(--gray400);font-weight:700;">~</span>
+      <select class="fsel" id="rateY2"></select>
+      <select class="fsel" id="rateM2">
+        <option value="" selected>—</option>
+        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+        <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+        <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+      </select>
     </div>
 
     <div id="rateEmpty" style="text-align:center;padding:48px 16px;color:var(--gray400);font-size:13px;">
-      출발지·도착지를 검색·선택한 뒤 [조회] 버튼을 눌러주세요 (톤급을 비워두면 전체 톤급 결과를 볼 수 있습니다)
+      출발지·도착지를 검색·선택한 뒤 [조회] 버튼을 눌러주세요 (톤급·기간을 비워두면 전체 결과를 볼 수 있습니다)
     </div>
 
     <div id="rateResultCard" style="display:none;">
@@ -1457,6 +1476,7 @@ td.bold { font-weight: 700; color: var(--navy); }
             <thead><tr id="rateThead" style="background:var(--navy);color:#fff;">
               <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
+              <th style="padding:7px 8px;text-align:left;white-space:nowrap;">고객(화주)</th>
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
               <th style="padding:7px 8px;text-align:right;white-space:nowrap;">중량</th>
               <th style="padding:7px 8px;text-align:right;white-space:nowrap;">하불</th>
@@ -1770,6 +1790,7 @@ function _setupRateCombo(inputId, boxId, getOptions) {
 
 function resetRateFilters(){
   ['rateFrom','rateTo','rateTon'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['rateY1','rateM1','rateY2','rateM2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   renderRateAnalysis();
 }
 
@@ -1781,19 +1802,25 @@ function renderRateAnalysis(){
   const from = document.getElementById('rateFrom').value.trim();
   const to   = document.getElementById('rateTo').value.trim();
   const ton  = document.getElementById('rateTon').value.trim();
+  const y1 = document.getElementById('rateY1').value, m1 = document.getElementById('rateM1').value;
+  const y2 = document.getElementById('rateY2').value, m2 = document.getElementById('rateM2').value;
+  const hasPeriod = !!(y1 && m1 && y2 && m2);
+  const period = hasPeriod ? periodBounds(y1,m1,y2,m2) : null;
 
   if (!from || !to) {
     card.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = '출발지·도착지를 입력(검색)하고 조회 버튼을 눌러주세요 (톤급은 비워두면 전체 조회)';
+    empty.textContent = '출발지·도착지를 입력(검색)하고 조회 버튼을 눌러주세요 (톤급·기간은 비워두면 전체 조회)';
     return;
   }
 
   // 같은 구간(출발지·도착지)의 벌크운송 건 — 톤급을 입력했으면 해당 톤급만, 비웠으면 전체 톤급
+  // 기간을 지정했으면 해당 연/월 범위 내 건만
   const items = allData
     .filter(r => r['용역구분']==='벌크운송'
       && (r['출발지']||'')===from && (r['도착지']||'')===to
-      && (!ton || (r['톤급']||'')===ton))
+      && (!ton || (r['톤급']||'')===ton)
+      && (!period || inPeriod(r, period.lo, period.hi)))
     .map(r => {
       const cost   = +r['하불(원)'] || 0;
       const weight = parseFloat(r['중량']);
@@ -1805,7 +1832,7 @@ function renderRateAnalysis(){
   if (!items.length) {
     card.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = '해당 구간' + (ton ? '·톤급' : '') + '의 데이터가 없습니다 (하불·중량 정보가 모두 있는 건 기준)';
+    empty.textContent = '해당 구간' + (ton ? '·톤급' : '') + (hasPeriod ? '·기간' : '') + '의 데이터가 없습니다 (하불·중량 정보가 모두 있는 건 기준)';
     return;
   }
 
@@ -1817,8 +1844,9 @@ function renderRateAnalysis(){
   const maxU = Math.max(...units);
   const avgU = units.reduce((s,v)=>s+v,0) / units.length;
 
+  const periodTxt = hasPeriod ? ` · ${periodLabel(y1,m1,y2,m2)}` : ' · 전체 기간';
   document.getElementById('rateSub').textContent =
-    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'} · 매칭 ${items.length}건 (하불 ÷ 중량 기준)`;
+    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'}${periodTxt} · 매칭 ${items.length}건 (하불 ÷ 중량 기준)`;
   document.getElementById('rateCnt').textContent = items.length + '건';
   document.getElementById('rateMin').textContent = fmt(Math.round(minU)) + '원/톤';
   document.getElementById('rateMax').textContent = fmt(Math.round(maxU)) + '원/톤';
@@ -1829,6 +1857,7 @@ function renderRateAnalysis(){
     <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
     <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
     ${showTonCol ? '<th style="padding:7px 8px;text-align:left;white-space:nowrap;">톤급</th>' : ''}
+    <th style="padding:7px 8px;text-align:left;white-space:nowrap;">고객(화주)</th>
     <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
     <th style="padding:7px 8px;text-align:right;white-space:nowrap;">중량</th>
     <th style="padding:7px 8px;text-align:right;white-space:nowrap;">하불</th>
@@ -1840,6 +1869,7 @@ function renderRateAnalysis(){
       <td style="padding:6px 8px;text-align:center;color:var(--gray400);font-weight:700;">${i+1}</td>
       <td style="padding:6px 8px;white-space:nowrap;">${r['연도']}-${String(r['월']).padStart(2,'0')}</td>
       ${showTonCol ? `<td style="padding:6px 8px;white-space:nowrap;color:var(--teal-d);font-weight:700;">${r['톤급']||'—'}</td>` : ''}
+      <td style="padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
       <td style="padding:6px 8px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmt(r._weight)}톤</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--gold);white-space:nowrap;">${fmt(+r['하불(원)']||0)}원</td>
@@ -2282,11 +2312,11 @@ async function loadFromSupabase() {
 
     // 연도 셀렉트 채우기(데이터 기반) → 기간 시작/끝 모두 최신연도로 기본 설정
     populateYearSelects();
-    populateRateSelects();
 
     // 2) 최신 연도 데이터 우선 로드 → 즉시 화면 표시
     const recent = await fetchAllRecords(q => q.eq('year', latest));
     allData = recent.map(dbToRow);
+    populateRateSelects();
     rerenderActiveViews();
 
     // 3) 나머지 연도는 백그라운드로 이어서 로드 → 병합 후 갱신
@@ -2808,6 +2838,9 @@ function populateYearSelects(){
   // 전체데이터: 초기 빈값
   setYearSelBlank('fY1'); setYearSelBlank('fY2');
   setMonthSelBlank('fM1'); setMonthSelBlank('fM2');
+  // 구간단가: 초기 빈값(전체 기간)
+  setYearSelBlank('rateY1'); setYearSelBlank('rateY2');
+  setMonthSelBlank('rateM1'); setMonthSelBlank('rateM2');
   _periodInited = true;
   // 배치관리 연도 (전체 옵션 포함)
   const bm=document.getElementById('bmYear');
