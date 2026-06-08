@@ -569,7 +569,7 @@ td.bold { font-weight: 700; color: var(--navy); }
   padding: 8px 14px; cursor: pointer; font-size: 13px; color: var(--navy);
   border-bottom: 1px solid var(--gray100); white-space: nowrap;
 }
-.rate-combo-box .opt:hover { background: var(--gray50); }
+.rate-combo-box .opt:hover, .rate-combo-box .opt.active { background: var(--teal-ll); color: var(--teal-d); font-weight:700; }
 .rate-combo-box .empty { padding: 10px 14px; font-size: 12px; color: var(--gray400); }
 .fsep { width: 1px; height: 18px; background: var(--gray200); flex-shrink: 0; }
 
@@ -1409,23 +1409,21 @@ td.bold { font-weight: 700; color: var(--navy); }
       <label>출발지</label>
       <div style="position:relative;">
         <input class="fsel" id="rateFrom" placeholder="🔍 검색 또는 선택" autocomplete="off"
-          onkeydown="if(event.key==='Enter') renderRateAnalysis()" style="min-width:120px;">
+style="min-width:120px;">
         <div id="rateFromBox" class="rate-combo-box"></div>
       </div>
       <label>도착지</label>
       <div style="position:relative;">
         <input class="fsel" id="rateTo" placeholder="🔍 검색 또는 선택" autocomplete="off"
-          onkeydown="if(event.key==='Enter') renderRateAnalysis()" style="min-width:120px;">
+style="min-width:120px;">
         <div id="rateToBox" class="rate-combo-box"></div>
       </div>
       <label>톤급 <span style="color:var(--gray400);font-weight:400;">(미입력시 전체)</span></label>
       <div style="position:relative;">
         <input class="fsel" id="rateTon" placeholder="🔍 검색 또는 전체" autocomplete="off"
-          onkeydown="if(event.key==='Enter') renderRateAnalysis()" style="min-width:100px;">
+style="min-width:100px;">
         <div id="rateTonBox" class="rate-combo-box"></div>
       </div>
-      <button onclick="renderRateAnalysis()" style="border:none;background:var(--teal);color:#fff;border-radius:var(--radius-xs);padding:7px 16px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;">조회</button>
-      <button onclick="resetRateFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
       <div class="fsep"></div>
       <label>기간 <span style="color:var(--gray400);font-weight:400;">(미입력시 전체)</span></label>
       <select class="fsel" id="rateY1"></select>
@@ -1445,6 +1443,8 @@ td.bold { font-weight: 700; color: var(--navy); }
         <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
         <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
       </select>
+      <button onclick="renderRateAnalysis()" style="border:none;background:var(--teal);color:#fff;border-radius:var(--radius-xs);padding:7px 16px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;margin-left:auto;">조회</button>
+      <button onclick="resetRateFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
     </div>
 
     <div id="rateEmpty" style="text-align:center;padding:48px 16px;color:var(--gray400);font-size:13px;">
@@ -1762,7 +1762,8 @@ function populateRateSelects(){
   }
 }
 
-// 검색 가능한 콤보박스: 입력하면 옵션 목록을 필터링해 보여주고, 클릭하면 선택
+// 검색 가능한 콤보박스: 입력하면 옵션 목록을 필터링해 보여주고,
+// 클릭 또는 ↑/↓ 방향키로 탐색 후 Enter로 선택 가능
 function _setupRateCombo(inputId, boxId, getOptions) {
   const input = document.getElementById(inputId);
   const box   = document.getElementById(boxId);
@@ -1771,36 +1772,72 @@ function _setupRateCombo(inputId, boxId, getOptions) {
   // body로 옮겨 position:fixed로 입력창 바로 아래에 띄운다
   document.body.appendChild(box);
   box.style.position = 'fixed';
+  let curList = [];
+  let activeIdx = -1;
+
   const reposition = () => {
     const r = input.getBoundingClientRect();
     box.style.left  = r.left + 'px';
     box.style.top   = (r.bottom + 4) + 'px';
     box.style.width = Math.max(r.width, 180) + 'px';
   };
+  const closeBox = () => { box.style.display = 'none'; activeIdx = -1; };
+  const highlight = () => {
+    [...box.querySelectorAll('.opt')].forEach((el, idx) => {
+      if (idx === activeIdx) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
+      else el.classList.remove('active');
+    });
+  };
+  const pick = (v) => {
+    input.value = v;
+    closeBox();
+    renderRateAnalysis();
+  };
   const renderList = () => {
     reposition();
     const q = input.value.trim().toLowerCase();
     const opts = getOptions();
-    const list = (q ? opts.filter(v => v.toLowerCase().includes(q)) : opts).slice(0, 50);
-    if (!list.length) {
+    curList = (q ? opts.filter(v => v.toLowerCase().includes(q)) : opts).slice(0, 50);
+    activeIdx = -1;
+    if (!curList.length) {
       box.innerHTML = '<div class="empty">일치하는 항목이 없습니다</div>';
     } else {
-      box.innerHTML = list.map(v => `<div class="opt" data-v="${v.replace(/"/g,'&quot;')}">${v}</div>`).join('');
+      box.innerHTML = curList.map(v => `<div class="opt" data-v="${v.replace(/"/g,'&quot;')}">${v}</div>`).join('');
     }
     box.style.display = 'block';
   };
   input.addEventListener('focus', renderList);
   input.addEventListener('input', renderList);
-  input.addEventListener('blur', () => setTimeout(() => { box.style.display = 'none'; }, 150));
+  input.addEventListener('keydown', e => {
+    if (box.style.display !== 'block' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { renderList(); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (curList.length) { activeIdx = (activeIdx + 1) % curList.length; highlight(); }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (curList.length) { activeIdx = (activeIdx - 1 + curList.length) % curList.length; highlight(); }
+    } else if (e.key === 'Enter') {
+      if (box.style.display === 'block' && activeIdx >= 0 && curList[activeIdx]) {
+        e.preventDefault();
+        pick(curList[activeIdx]);
+      } else {
+        closeBox();
+        renderRateAnalysis();
+      }
+    } else if (e.key === 'Escape') {
+      closeBox();
+    }
+  });
   window.addEventListener('scroll', () => { if (box.style.display === 'block') reposition(); }, true);
   window.addEventListener('resize', () => { if (box.style.display === 'block') reposition(); });
+  document.addEventListener('mousedown', e => {
+    if (box.style.display === 'block' && !input.contains(e.target) && !box.contains(e.target)) closeBox();
+  });
   box.addEventListener('mousedown', e => {
     const opt = e.target.closest('.opt');
     if (!opt) return;
     e.preventDefault();
-    input.value = opt.getAttribute('data-v');
-    box.style.display = 'none';
-    renderRateAnalysis();
+    pick(opt.getAttribute('data-v'));
   });
 }
 
