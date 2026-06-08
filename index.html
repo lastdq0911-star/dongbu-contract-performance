@@ -851,6 +851,9 @@ td.bold { font-weight: 700; color: var(--navy); }
   <button class="nav-item" data-view="client" onclick="goView('client', this)">
     <span class="ni">👤</span>고객별
   </button>
+  <button class="nav-item" data-view="rate" onclick="goView('rate', this)">
+    <span class="ni">🚛</span>구간단가
+  </button>
   <button class="nav-item" data-view="upload" onclick="goView('upload', this)">
     <span class="ni">📤</span>업로드
   </button>
@@ -1384,6 +1387,63 @@ td.bold { font-weight: 700; color: var(--navy); }
     </div>
   </div><!-- /view-client -->
 
+  <!-- ══════════════ VIEW: 구간단가분석 ══════════════════ -->
+  <div class="view" id="view-rate">
+    <div style="margin-bottom:16px;">
+      <div class="page-title">구간 단가 분석</div>
+      <div class="page-sub" id="rateSub">벌크운송 · 출발지·도착지·톤급이 같은 건의 하불 단가(원/톤) 최저·최고·평균</div>
+    </div>
+    <div class="filter-row">
+      <label>출발지</label>
+      <select class="fsel" id="rateFrom" onchange="renderRateAnalysis()"><option value="">선택</option></select>
+      <label>도착지</label>
+      <select class="fsel" id="rateTo" onchange="renderRateAnalysis()"><option value="">선택</option></select>
+      <label>톤급</label>
+      <select class="fsel" id="rateTon" onchange="renderRateAnalysis()"><option value="">선택</option></select>
+      <button onclick="resetRateFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
+    </div>
+
+    <div id="rateEmpty" style="text-align:center;padding:48px 16px;color:var(--gray400);font-size:13px;">
+      출발지·도착지·톤급을 모두 선택하면 자동으로 분석됩니다
+    </div>
+
+    <div id="rateResultCard" style="display:none;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <div style="flex:1;min-width:110px;background:var(--gray50);border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">건수</div>
+          <div id="rateCnt" style="font-size:18px;font-weight:800;color:var(--navy);margin-top:2px;">—</div>
+        </div>
+        <div style="flex:1;min-width:110px;background:var(--teal-ll);border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저 단가</div>
+          <div id="rateMin" style="font-size:18px;font-weight:800;color:var(--teal-d);margin-top:2px;white-space:nowrap;">—</div>
+        </div>
+        <div style="flex:1;min-width:110px;background:var(--gold-l);border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고 단가</div>
+          <div id="rateMax" style="font-size:18px;font-weight:800;color:var(--gold);margin-top:2px;white-space:nowrap;">—</div>
+        </div>
+        <div style="flex:1;min-width:110px;background:var(--green-l);border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균 단가</div>
+          <div id="rateAvg" style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px;white-space:nowrap;">—</div>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr style="background:var(--navy);color:#fff;">
+              <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
+              <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
+              <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">중량</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">하불</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">단가(원/톤)</th>
+            </tr></thead>
+            <tbody id="rateBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /view-rate -->
+
   <!-- ══════════════ VIEW: 배치관리 ══════════════════════ -->
   <div class="view" id="view-batch">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -1622,6 +1682,89 @@ function resetClientFilters(){
   renderClient();
 }
 
+// ══════════════════════════════════════════════════════
+// 구간 단가 분석 (벌크운송 — 출발지·도착지·톤급 기준 하불 단가)
+// ══════════════════════════════════════════════════════
+function populateRateSelects(){
+  const bulk = allData.filter(r => r['용역구분']==='벌크운송');
+  const fill = (id, arr) => {
+    const el = document.getElementById(id); if (!el) return;
+    const prev = el.value;
+    el.innerHTML = '<option value="">선택</option>' + arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+    el.value = arr.includes(prev) ? prev : '';
+  };
+  fill('rateFrom', [...new Set(bulk.map(r=>r['출발지']).filter(Boolean))].sort());
+  fill('rateTo',   [...new Set(bulk.map(r=>r['도착지']).filter(Boolean))].sort());
+  fill('rateTon',  [...new Set(bulk.map(r=>r['톤급']).filter(Boolean))].sort());
+}
+
+function resetRateFilters(){
+  ['rateFrom','rateTo','rateTon'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  renderRateAnalysis();
+}
+
+function renderRateAnalysis(){
+  const empty = document.getElementById('rateEmpty');
+  const card  = document.getElementById('rateResultCard');
+  if (!empty || !card) return; // 아직 데이터 미로드 시점 등
+
+  const from = document.getElementById('rateFrom').value;
+  const to   = document.getElementById('rateTo').value;
+  const ton  = document.getElementById('rateTon').value;
+
+  if (!from || !to || !ton) {
+    card.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = '출발지·도착지·톤급을 모두 선택하면 자동으로 분석됩니다';
+    return;
+  }
+
+  // 같은 구간(출발지·도착지)·같은 톤급의 벌크운송 건만 — 단가 = 하불(원) ÷ 중량(톤)
+  const items = allData
+    .filter(r => r['용역구분']==='벌크운송'
+      && (r['출발지']||'')===from && (r['도착지']||'')===to && (r['톤급']||'')===ton)
+    .map(r => {
+      const cost   = +r['하불(원)'] || 0;
+      const weight = parseFloat(r['중량']);
+      if (!weight || weight <= 0 || !cost) return null;
+      return { ...r, _weight: weight, _unit: cost / weight };
+    })
+    .filter(Boolean);
+
+  if (!items.length) {
+    card.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = '해당 구간·톤급의 데이터가 없습니다 (하불·중량 정보가 모두 있는 건 기준)';
+    return;
+  }
+
+  empty.style.display = 'none';
+  card.style.display = 'block';
+
+  const units = items.map(i=>i._unit);
+  const minU = Math.min(...units);
+  const maxU = Math.max(...units);
+  const avgU = units.reduce((s,v)=>s+v,0) / units.length;
+
+  document.getElementById('rateSub').textContent =
+    `🚛 ${from} → ${to} · ${ton} · 매칭 ${items.length}건 (하불 ÷ 중량 기준)`;
+  document.getElementById('rateCnt').textContent = items.length + '건';
+  document.getElementById('rateMin').textContent = fmt(Math.round(minU)) + '원/톤';
+  document.getElementById('rateMax').textContent = fmt(Math.round(maxU)) + '원/톤';
+  document.getElementById('rateAvg').textContent = fmt(Math.round(avgU)) + '원/톤';
+
+  const sorted = [...items].sort((a,b)=>a._unit-b._unit);
+  document.getElementById('rateBody').innerHTML = sorted.map((r,i)=>`
+    <tr style="border-bottom:1px solid var(--gray100);">
+      <td style="padding:6px 8px;text-align:center;color:var(--gray400);font-weight:700;">${i+1}</td>
+      <td style="padding:6px 8px;white-space:nowrap;">${r['연도']}-${String(r['월']).padStart(2,'0')}</td>
+      <td style="padding:6px 8px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmt(r._weight)}톤</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--gold);white-space:nowrap;">${fmt(+r['하불(원)']||0)}원</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmt(Math.round(r._unit))}원/톤</td>
+    </tr>`).join('');
+}
+
 // ── 컬럼 리사이즈 (협력사별/고객별 — auto layout, th 너비 조정) ──
 function startColResize(e, th) {
   e.preventDefault(); e.stopPropagation();
@@ -1802,6 +1945,7 @@ function goView(name, btn) {
   if (name==='table')   renderTable();
   if (name==='partner') renderPartner();
   if (name==='client')  renderClient();
+  if (name==='rate')    renderRateAnalysis();
   if (name==='batch')   renderBatchManager();
 }
 
@@ -2036,6 +2180,7 @@ function rerenderActiveViews() {
   if (document.getElementById('view-table').classList.contains('active'))   renderTable();
   if (document.getElementById('view-partner').classList.contains('active')) renderPartner();
   if (document.getElementById('view-client').classList.contains('active'))  renderClient();
+  if (document.getElementById('view-rate').classList.contains('active'))    renderRateAnalysis();
   if (document.getElementById('view-batch').classList.contains('active'))   renderBatchManager();
 }
 
@@ -2055,6 +2200,7 @@ async function loadFromSupabase() {
 
     // 연도 셀렉트 채우기(데이터 기반) → 기간 시작/끝 모두 최신연도로 기본 설정
     populateYearSelects();
+    populateRateSelects();
 
     // 2) 최신 연도 데이터 우선 로드 → 즉시 화면 표시
     const recent = await fetchAllRecords(q => q.eq('year', latest));
@@ -2065,6 +2211,7 @@ async function loadFromSupabase() {
     if (years.length > 1) {
       const rest = await fetchAllRecords(q => q.neq('year', latest));
       allData = allData.concat(rest.map(dbToRow));
+      populateRateSelects();
       rerenderActiveViews();
     }
   } catch(e) {
