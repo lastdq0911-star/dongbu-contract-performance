@@ -560,6 +560,17 @@ td.bold { font-weight: 700; color: var(--navy); }
   color: var(--navy); outline: none;
 }
 .finp:focus { border-color: var(--teal); }
+.rate-combo-box {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px;
+  background: #fff; border: 1px solid var(--gray200); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 240px; overflow: auto; z-index: 60;
+}
+.rate-combo-box .opt {
+  padding: 8px 14px; cursor: pointer; font-size: 13px; color: var(--navy);
+  border-bottom: 1px solid var(--gray100); white-space: nowrap;
+}
+.rate-combo-box .opt:hover { background: var(--gray50); }
+.rate-combo-box .empty { padding: 10px 14px; font-size: 12px; color: var(--gray400); }
 .fsep { width: 1px; height: 18px; background: var(--gray200); flex-shrink: 0; }
 
 /* ══ CHART BARS ══════════════════════════════════════ */
@@ -1394,24 +1405,31 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="page-sub" id="rateSub">벌크운송 · 출발지·도착지·톤급이 같은 건의 하불 단가(원/톤) 최저·최고·평균</div>
     </div>
 
-    <div class="filter-row">
+    <div class="filter-row" style="position:relative;">
       <label>출발지</label>
-      <input class="fsel" id="rateFrom" list="rateFromList" placeholder="🔍 검색 또는 선택" autocomplete="off"
-        oninput="renderRateAnalysis()" onchange="renderRateAnalysis()" style="min-width:120px;">
-      <datalist id="rateFromList"></datalist>
+      <div style="position:relative;">
+        <input class="fsel" id="rateFrom" placeholder="🔍 검색 또는 선택" autocomplete="off"
+          onkeydown="if(event.key==='Enter') renderRateAnalysis()" style="min-width:120px;">
+        <div id="rateFromBox" class="rate-combo-box"></div>
+      </div>
       <label>도착지</label>
-      <input class="fsel" id="rateTo" list="rateToList" placeholder="🔍 검색 또는 선택" autocomplete="off"
-        oninput="renderRateAnalysis()" onchange="renderRateAnalysis()" style="min-width:120px;">
-      <datalist id="rateToList"></datalist>
-      <label>톤급</label>
-      <input class="fsel" id="rateTon" list="rateTonList" placeholder="🔍 검색 또는 선택" autocomplete="off"
-        oninput="renderRateAnalysis()" onchange="renderRateAnalysis()" style="min-width:100px;">
-      <datalist id="rateTonList"></datalist>
+      <div style="position:relative;">
+        <input class="fsel" id="rateTo" placeholder="🔍 검색 또는 선택" autocomplete="off"
+          onkeydown="if(event.key==='Enter') renderRateAnalysis()" style="min-width:120px;">
+        <div id="rateToBox" class="rate-combo-box"></div>
+      </div>
+      <label>톤급 <span style="color:var(--gray400);font-weight:400;">(미입력시 전체)</span></label>
+      <div style="position:relative;">
+        <input class="fsel" id="rateTon" placeholder="🔍 검색 또는 전체" autocomplete="off"
+          onkeydown="if(event.key==='Enter') renderRateAnalysis()" style="min-width:100px;">
+        <div id="rateTonBox" class="rate-combo-box"></div>
+      </div>
+      <button onclick="renderRateAnalysis()" style="border:none;background:var(--teal);color:#fff;border-radius:var(--radius-xs);padding:7px 16px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;">조회</button>
       <button onclick="resetRateFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
     </div>
 
     <div id="rateEmpty" style="text-align:center;padding:48px 16px;color:var(--gray400);font-size:13px;">
-      출발지·도착지·톤급을 모두 선택하면 자동으로 분석됩니다
+      출발지·도착지를 검색·선택한 뒤 [조회] 버튼을 눌러주세요 (톤급을 비워두면 전체 톤급 결과를 볼 수 있습니다)
     </div>
 
     <div id="rateResultCard" style="display:none;">
@@ -1436,7 +1454,7 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="card" style="padding:0;overflow:hidden;">
         <div class="tbl-wrap">
           <table>
-            <thead><tr style="background:var(--navy);color:#fff;">
+            <thead><tr id="rateThead" style="background:var(--navy);color:#fff;">
               <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
@@ -1692,20 +1710,49 @@ function resetClientFilters(){
 // ══════════════════════════════════════════════════════
 // 구간 단가 분석 (벌크운송 — 출발지·도착지·톤급 기준 하불 단가)
 // ══════════════════════════════════════════════════════
+let _rateOpts = { from: [], to: [], ton: [] };
+let _rateComboInit = false;
+
 function populateRateSelects(){
   const bulk = allData.filter(r => r['용역구분']==='벌크운송');
-  // input + datalist 콤보박스: 옵션 목록을 datalist에 채워 타이핑하면 검색되도록 함
-  const fill = (inputId, listId, arr) => {
-    const input = document.getElementById(inputId);
-    const list  = document.getElementById(listId);
-    if (!input || !list) return;
-    const prev = input.value;
-    list.innerHTML = arr.map(v=>`<option value="${v}"></option>`).join('');
-    input.value = arr.includes(prev) ? prev : '';
+  _rateOpts.from = [...new Set(bulk.map(r=>r['출발지']).filter(Boolean))].sort();
+  _rateOpts.to   = [...new Set(bulk.map(r=>r['도착지']).filter(Boolean))].sort();
+  _rateOpts.ton  = [...new Set(bulk.map(r=>r['톤급']).filter(Boolean))].sort();
+  if (!_rateComboInit) {
+    _setupRateCombo('rateFrom', 'rateFromBox', () => _rateOpts.from);
+    _setupRateCombo('rateTo',   'rateToBox',   () => _rateOpts.to);
+    _setupRateCombo('rateTon',  'rateTonBox',  () => _rateOpts.ton);
+    _rateComboInit = true;
+  }
+}
+
+// 검색 가능한 콤보박스: 입력하면 옵션 목록을 필터링해 보여주고, 클릭하면 선택
+function _setupRateCombo(inputId, boxId, getOptions) {
+  const input = document.getElementById(inputId);
+  const box   = document.getElementById(boxId);
+  if (!input || !box) return;
+  const renderList = () => {
+    const q = input.value.trim().toLowerCase();
+    const opts = getOptions();
+    const list = (q ? opts.filter(v => v.toLowerCase().includes(q)) : opts).slice(0, 50);
+    if (!list.length) {
+      box.innerHTML = '<div class="empty">일치하는 항목이 없습니다</div>';
+    } else {
+      box.innerHTML = list.map(v => `<div class="opt" data-v="${v.replace(/"/g,'&quot;')}">${v}</div>`).join('');
+    }
+    box.style.display = 'block';
   };
-  fill('rateFrom', 'rateFromList', [...new Set(bulk.map(r=>r['출발지']).filter(Boolean))].sort());
-  fill('rateTo',   'rateToList',   [...new Set(bulk.map(r=>r['도착지']).filter(Boolean))].sort());
-  fill('rateTon',  'rateTonList',  [...new Set(bulk.map(r=>r['톤급']).filter(Boolean))].sort());
+  input.addEventListener('focus', renderList);
+  input.addEventListener('input', renderList);
+  input.addEventListener('blur', () => setTimeout(() => { box.style.display = 'none'; }, 150));
+  box.addEventListener('mousedown', e => {
+    const opt = e.target.closest('.opt');
+    if (!opt) return;
+    e.preventDefault();
+    input.value = opt.getAttribute('data-v');
+    box.style.display = 'none';
+    renderRateAnalysis();
+  });
 }
 
 function resetRateFilters(){
@@ -1722,17 +1769,18 @@ function renderRateAnalysis(){
   const to   = document.getElementById('rateTo').value.trim();
   const ton  = document.getElementById('rateTon').value.trim();
 
-  if (!from || !to || !ton) {
+  if (!from || !to) {
     card.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = '출발지·도착지·톤급을 모두 선택하면 자동으로 분석됩니다';
+    empty.textContent = '출발지·도착지를 입력(검색)하고 조회 버튼을 눌러주세요 (톤급은 비워두면 전체 조회)';
     return;
   }
 
-  // 같은 구간(출발지·도착지)·같은 톤급의 벌크운송 건만 — 단가 = 하불(원) ÷ 중량(톤)
+  // 같은 구간(출발지·도착지)의 벌크운송 건 — 톤급을 입력했으면 해당 톤급만, 비웠으면 전체 톤급
   const items = allData
     .filter(r => r['용역구분']==='벌크운송'
-      && (r['출발지']||'')===from && (r['도착지']||'')===to && (r['톤급']||'')===ton)
+      && (r['출발지']||'')===from && (r['도착지']||'')===to
+      && (!ton || (r['톤급']||'')===ton))
     .map(r => {
       const cost   = +r['하불(원)'] || 0;
       const weight = parseFloat(r['중량']);
@@ -1744,7 +1792,7 @@ function renderRateAnalysis(){
   if (!items.length) {
     card.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = '해당 구간·톤급의 데이터가 없습니다 (하불·중량 정보가 모두 있는 건 기준)';
+    empty.textContent = '해당 구간' + (ton ? '·톤급' : '') + '의 데이터가 없습니다 (하불·중량 정보가 모두 있는 건 기준)';
     return;
   }
 
@@ -1757,17 +1805,28 @@ function renderRateAnalysis(){
   const avgU = units.reduce((s,v)=>s+v,0) / units.length;
 
   document.getElementById('rateSub').textContent =
-    `🚛 ${from} → ${to} · ${ton} · 매칭 ${items.length}건 (하불 ÷ 중량 기준)`;
+    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'} · 매칭 ${items.length}건 (하불 ÷ 중량 기준)`;
   document.getElementById('rateCnt').textContent = items.length + '건';
   document.getElementById('rateMin').textContent = fmt(Math.round(minU)) + '원/톤';
   document.getElementById('rateMax').textContent = fmt(Math.round(maxU)) + '원/톤';
   document.getElementById('rateAvg').textContent = fmt(Math.round(avgU)) + '원/톤';
+
+  const showTonCol = !ton;
+  document.getElementById('rateThead').innerHTML = `
+    <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
+    <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
+    ${showTonCol ? '<th style="padding:7px 8px;text-align:left;white-space:nowrap;">톤급</th>' : ''}
+    <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
+    <th style="padding:7px 8px;text-align:right;white-space:nowrap;">중량</th>
+    <th style="padding:7px 8px;text-align:right;white-space:nowrap;">하불</th>
+    <th style="padding:7px 8px;text-align:right;white-space:nowrap;">단가(원/톤)</th>`;
 
   const sorted = [...items].sort((a,b)=>a._unit-b._unit);
   document.getElementById('rateBody').innerHTML = sorted.map((r,i)=>`
     <tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:6px 8px;text-align:center;color:var(--gray400);font-weight:700;">${i+1}</td>
       <td style="padding:6px 8px;white-space:nowrap;">${r['연도']}-${String(r['월']).padStart(2,'0')}</td>
+      ${showTonCol ? `<td style="padding:6px 8px;white-space:nowrap;color:var(--teal-d);font-weight:700;">${r['톤급']||'—'}</td>` : ''}
       <td style="padding:6px 8px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmt(r._weight)}톤</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--gold);white-space:nowrap;">${fmt(+r['하불(원)']||0)}원</td>
