@@ -1472,7 +1472,7 @@ td.bold { font-weight: 700; color: var(--navy); }
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <div class="tbl-wrap">
-          <table>
+          <table id="rateTable">
             <thead><tr id="rateThead" style="background:var(--navy);color:#fff;">
               <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
@@ -1732,6 +1732,22 @@ function resetClientFilters(){
 // ══════════════════════════════════════════════════════
 let _rateOpts = { from: [], to: [], ton: [] };
 let _rateComboInit = false;
+let rateSort = { field: 'unit', dir: 'asc' };
+function sortRateBy(field){
+  if (rateSort.field === field) rateSort.dir = rateSort.dir === 'asc' ? 'desc' : 'asc';
+  else rateSort = { field, dir: (field==='partner'||field==='customer'||field==='ton'||field==='period') ? 'asc' : 'desc' };
+  renderRateAnalysis();
+}
+function _rateTh(label, field, align){
+  const sCls = rateSort.field===field ? ` ${rateSort.dir}` : '';
+  return `<th style="text-align:${align||'left'};white-space:nowrap;position:relative;padding:7px 8px;">
+    <div class="th-inner" style="justify-content:${align==='right'?'flex-end':'flex-start'};">
+      <span style="cursor:pointer;" onclick="sortRateBy('${field}')">${label}</span>
+      <button class="col-sort-btn${sCls}" onclick="sortRateBy('${field}')">↕</button>
+    </div>
+    <div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div>
+  </th>`;
+}
 
 function populateRateSelects(){
   const bulk = allData.filter(r => r['용역구분']==='벌크운송');
@@ -1853,17 +1869,34 @@ function renderRateAnalysis(){
   document.getElementById('rateAvg').textContent = fmt(Math.round(avgU)) + '원/톤';
 
   const showTonCol = !ton;
-  document.getElementById('rateThead').innerHTML = `
-    <th style="padding:7px 8px;text-align:center;white-space:nowrap;">#</th>
-    <th style="padding:7px 8px;text-align:left;white-space:nowrap;">연/월</th>
-    ${showTonCol ? '<th style="padding:7px 8px;text-align:left;white-space:nowrap;">톤급</th>' : ''}
-    <th style="padding:7px 8px;text-align:left;white-space:nowrap;">고객(화주)</th>
-    <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
-    <th style="padding:7px 8px;text-align:right;white-space:nowrap;">중량</th>
-    <th style="padding:7px 8px;text-align:right;white-space:nowrap;">하불</th>
-    <th style="padding:7px 8px;text-align:right;white-space:nowrap;">단가(원/톤)</th>`;
 
-  const sorted = [...items].sort((a,b)=>a._unit-b._unit);
+  document.getElementById('rateThead').innerHTML = `
+    <th style="padding:7px 8px;text-align:center;white-space:nowrap;position:relative;">#<div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div></th>
+    ${_rateTh('연/월','period','left')}
+    ${showTonCol ? _rateTh('톤급','ton','left') : ''}
+    ${_rateTh('고객(화주)','customer','left')}
+    ${_rateTh('협력사','partner','left')}
+    ${_rateTh('중량','weight','right')}
+    ${_rateTh('하불','cost','right')}
+    ${_rateTh('단가(원/톤)','unit','right')}`;
+
+  const getters = {
+    period:   r => (+r['연도'])*100 + (+r['월']),
+    ton:      r => r['톤급'] || '',
+    customer: r => r['고객(화주)'] || '',
+    partner:  r => r['협력사명'] || '',
+    weight:   r => r._weight,
+    cost:     r => +r['하불(원)'] || 0,
+    unit:     r => r._unit,
+  };
+  const g = getters[rateSort.field] || getters.unit;
+  const dir = rateSort.dir === 'asc' ? 1 : -1;
+  const sorted = [...items].sort((a,b) => {
+    const va = g(a), vb = g(b);
+    if (typeof va === 'string') return dir * va.localeCompare(vb, 'ko');
+    return dir * (va - vb);
+  });
+
   document.getElementById('rateBody').innerHTML = sorted.map((r,i)=>`
     <tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:6px 8px;text-align:center;color:var(--gray400);font-weight:700;">${i+1}</td>
@@ -1875,6 +1908,8 @@ function renderRateAnalysis(){
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--gold);white-space:nowrap;">${fmt(+r['하불(원)']||0)}원</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmt(Math.round(r._unit))}원/톤</td>
     </tr>`).join('');
+
+  setupDynColDrag('rateTable');
 }
 
 // ── 컬럼 리사이즈 (협력사별/고객별 — auto layout, th 너비 조정) ──
