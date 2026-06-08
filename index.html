@@ -1458,24 +1458,11 @@ style="min-width:100px;">
     </div>
 
     <div id="rateResultCard" style="display:none;">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-        <div style="flex:1;min-width:110px;background:var(--gray50);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">건수</div>
-          <div id="rateCnt" style="font-size:18px;font-weight:800;color:var(--navy);margin-top:2px;">—</div>
-        </div>
-        <div style="flex:1;min-width:110px;background:var(--teal-ll);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저가 (원/톤급)</div>
-          <div id="rateMin" style="font-size:18px;font-weight:800;color:var(--teal-d);margin-top:2px;white-space:nowrap;">—</div>
-        </div>
-        <div style="flex:1;min-width:110px;background:var(--gold-l);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고가 (원/톤급)</div>
-          <div id="rateMax" style="font-size:18px;font-weight:800;color:var(--gold);margin-top:2px;white-space:nowrap;">—</div>
-        </div>
-        <div style="flex:1;min-width:110px;background:var(--green-l);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균가 (원/톤급)</div>
-          <div id="rateAvg" style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px;white-space:nowrap;">—</div>
-        </div>
+      <div style="margin-bottom:6px;background:var(--gray50);border-radius:10px;padding:10px 14px;display:inline-block;">
+        <span style="font-size:11px;color:var(--gray500);font-weight:700;">건수</span>
+        <span id="rateCnt" style="font-size:16px;font-weight:800;color:var(--navy);margin-left:8px;">—</span>
       </div>
+      <div id="rateKpiWrap" style="margin-bottom:16px;"></div>
       <div id="rateTonSummaryCard" class="card" style="display:none;padding:14px;margin-bottom:16px;">
         <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;">🚚 톤급별 평균 하불금액 — 차량 톤급당 실제 지급된 하불 금액</div>
         <div class="tbl-wrap">
@@ -1484,7 +1471,8 @@ style="min-width:100px;">
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">톤급</th>
               <th style="padding:7px 8px;text-align:right;white-space:nowrap;">건수</th>
               <th style="padding:7px 8px;text-align:right;white-space:nowrap;">평균 하불금액(원)</th>
-              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">평균 단가(원/톤급)</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">평균 단가 (중량=1, 원/톤급)</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">평균 단가 (중량≠1, 원/톤)</th>
             </tr></thead>
             <tbody id="rateTonSummaryBody"></tbody>
           </table>
@@ -1948,7 +1936,11 @@ function renderRateAnalysis(){
       const cost   = +r['하불(원)'] || 0;
       const weight = parseFloat(r['중량']);
       if (!weight || weight <= 0 || !cost) return null;
-      return { ...r, _weight: weight, _unit: cost / weight };
+      // 중량=1: 하불액 자체가 톤급당 단가 / 중량≠1: 하불액÷중량 = 톤당 단가
+      const isDirect = (weight === 1);
+      return { ...r, _weight: weight, _isDirect: isDirect,
+        _unit: isDirect ? cost : (cost / weight),
+        _unitLabel: isDirect ? '원/톤급' : '원/톤' };
     })
     .filter(Boolean);
 
@@ -1962,18 +1954,40 @@ function renderRateAnalysis(){
   empty.style.display = 'none';
   card.style.display = 'block';
 
-  const units = items.map(i=>i._unit);
-  const minU = Math.min(...units);
-  const maxU = Math.max(...units);
-  const avgU = units.reduce((s,v)=>s+v,0) / units.length;
-
   const periodTxt = hasPeriod ? ` · ${periodLabel(y1,m1,y2,m2)}` : ' · 전체 기간';
   document.getElementById('rateSub').textContent =
-    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'}${periodTxt} · 매칭 ${items.length}건 · 톤당 단가 = 하불금액 ÷ 중량(톤)`;
+    `🚛 ${from} → ${to}${ton ? ' · ' + ton : ' · 전체 톤급'}${periodTxt} · 매칭 ${items.length}건 · 중량=1톤 건은 하불액=톤급당 단가, 그 외는 하불액÷중량=톤당 단가`;
   document.getElementById('rateCnt').textContent = items.length + '건';
-  document.getElementById('rateMin').textContent = fmt(Math.round(minU)) + '원/톤';
-  document.getElementById('rateMax').textContent = fmt(Math.round(maxU)) + '원/톤';
-  document.getElementById('rateAvg').textContent = fmt(Math.round(avgU)) + '원/톤';
+
+  // 그룹 분리: 중량=1(톤급당 직접 단가) / 중량≠1(톤당 환산 단가)
+  function kpiBlock(label, unitLabel, color, list){
+    if (!list.length) return '';
+    const us = list.map(i=>i._unit);
+    const mn = Math.min(...us), mx = Math.max(...us), av = us.reduce((s,v)=>s+v,0)/us.length;
+    return `
+      <div style="margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px;">${label} <span style="color:var(--gray400);font-weight:400;">(${list.length}건 · ${unitLabel})</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:110px;background:var(--teal-ll);border-radius:10px;padding:12px 14px;">
+            <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저가 (${unitLabel})</div>
+            <div style="font-size:18px;font-weight:800;color:var(--teal-d);margin-top:2px;white-space:nowrap;">${fmt(Math.round(mn))}${unitLabel}</div>
+          </div>
+          <div style="flex:1;min-width:110px;background:var(--gold-l);border-radius:10px;padding:12px 14px;">
+            <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고가 (${unitLabel})</div>
+            <div style="font-size:18px;font-weight:800;color:var(--gold);margin-top:2px;white-space:nowrap;">${fmt(Math.round(mx))}${unitLabel}</div>
+          </div>
+          <div style="flex:1;min-width:110px;background:var(--green-l);border-radius:10px;padding:12px 14px;">
+            <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균가 (${unitLabel})</div>
+            <div style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px;white-space:nowrap;">${fmt(Math.round(av))}${unitLabel}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  const directItems = items.filter(i=>i._isDirect);
+  const perTonItems = items.filter(i=>!i._isDirect);
+  document.getElementById('rateKpiWrap').innerHTML =
+    kpiBlock('🅰️ 중량=1톤 (하불액 = 톤급당 단가)', '원/톤급', 'teal', directItems) +
+    kpiBlock('🅱️ 중량≠1톤 (하불액 ÷ 중량 = 톤당 단가)', '원/톤', 'gold', perTonItems);
 
   const showTonCol = !ton;
 
@@ -1983,20 +1997,26 @@ function renderRateAnalysis(){
     const byTon = {};
     items.forEach(r => {
       const t = r['톤급'] || '—';
-      if (!byTon[t]) byTon[t] = { cnt: 0, costSum: 0, unitSum: 0 };
+      if (!byTon[t]) byTon[t] = { cnt: 0, costSum: 0, dCnt: 0, dUnitSum: 0, pCnt: 0, pUnitSum: 0 };
       byTon[t].cnt++;
       byTon[t].costSum += (+r['하불(원)'] || 0);
-      byTon[t].unitSum += r._unit;
+      if (r._isDirect) { byTon[t].dCnt++; byTon[t].dUnitSum += r._unit; }
+      else { byTon[t].pCnt++; byTon[t].pUnitSum += r._unit; }
     });
     const tonRows = Object.entries(byTon)
-      .map(([t, v]) => ({ ton: t, cnt: v.cnt, avgCost: v.costSum / v.cnt, avgUnit: v.unitSum / v.cnt }))
+      .map(([t, v]) => ({
+        ton: t, cnt: v.cnt, avgCost: v.costSum / v.cnt,
+        avgDirect: v.dCnt ? v.dUnitSum / v.dCnt : null,
+        avgPerTon: v.pCnt ? v.pUnitSum / v.pCnt : null,
+      }))
       .sort((a, b) => b.cnt - a.cnt);
     document.getElementById('rateTonSummaryBody').innerHTML = tonRows.map(v => `
       <tr style="border-bottom:1px solid var(--gray100);">
         <td style="padding:6px 8px;font-weight:700;color:var(--teal-d);white-space:nowrap;">${v.ton}</td>
         <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmt(v.cnt)}건</td>
         <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:700;color:var(--gold);white-space:nowrap;">${fmt(Math.round(v.avgCost))}원</td>
-        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmt(Math.round(v.avgUnit))}원/톤급</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${v.avgDirect!=null ? fmt(Math.round(v.avgDirect))+'원/톤급' : '—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--gold);white-space:nowrap;">${v.avgPerTon!=null ? fmt(Math.round(v.avgPerTon))+'원/톤' : '—'}</td>
       </tr>`).join('');
     tonSummaryCard.style.display = 'block';
   } else {
@@ -2006,12 +2026,12 @@ function renderRateAnalysis(){
   document.getElementById('rateThead').innerHTML = `
     <th style="padding:7px 8px;text-align:center;white-space:nowrap;position:relative;">#<div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div></th>
     ${_rateTh('연/월','period','left')}
-    ${showTonCol ? _rateTh('톤급','ton','left') : ''}
     ${_rateTh('고객(화주)','customer','left')}
     ${_rateTh('협력사','partner','left')}
+    ${showTonCol ? _rateTh('톤급','ton','left') : ''}
     ${_rateTh('중량','weight','right')}
     ${_rateTh('하불','cost','right')}
-    ${_rateTh('단가(원/톤)','unit','right')}`;
+    ${_rateTh('단가','unit','right')}`;
 
   const getters = {
     period:   r => (+r['연도'])*100 + (+r['월']),
@@ -2034,12 +2054,12 @@ function renderRateAnalysis(){
     <tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:6px 8px;text-align:center;color:var(--gray400);font-weight:700;">${i+1}</td>
       <td style="padding:6px 8px;white-space:nowrap;">${r['연도']}-${String(r['월']).padStart(2,'0')}</td>
-      ${showTonCol ? `<td style="padding:6px 8px;white-space:nowrap;color:var(--teal-d);font-weight:700;">${r['톤급']||'—'}</td>` : ''}
       <td style="padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;" title="${r['고객(화주)']||''}">${r['고객(화주)']||'—'}</td>
       <td style="padding:6px 8px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['협력사명']||''}">${r['협력사명']||'—'}</td>
+      ${showTonCol ? `<td style="padding:6px 8px;white-space:nowrap;color:var(--teal-d);font-weight:700;">${r['톤급']||'—'}</td>` : ''}
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmt(r._weight)}톤</td>
       <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--gold);white-space:nowrap;">${fmt(+r['하불(원)']||0)}원</td>
-      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmt(Math.round(r._unit))}원/톤</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:${r._isDirect?'var(--teal-d)':'var(--gold)'};white-space:nowrap;">${fmt(Math.round(r._unit))}${r._unitLabel}</td>
     </tr>`).join('');
 
   setupDynColDrag('rateTable');
