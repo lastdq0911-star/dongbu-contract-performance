@@ -1464,16 +1464,30 @@ style="min-width:100px;">
           <div id="rateCnt" style="font-size:18px;font-weight:800;color:var(--navy);margin-top:2px;">—</div>
         </div>
         <div style="flex:1;min-width:110px;background:var(--teal-ll);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저가 (원/톤)</div>
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최저가 (원/톤급)</div>
           <div id="rateMin" style="font-size:18px;font-weight:800;color:var(--teal-d);margin-top:2px;white-space:nowrap;">—</div>
         </div>
         <div style="flex:1;min-width:110px;background:var(--gold-l);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고가 (원/톤)</div>
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">최고가 (원/톤급)</div>
           <div id="rateMax" style="font-size:18px;font-weight:800;color:var(--gold);margin-top:2px;white-space:nowrap;">—</div>
         </div>
         <div style="flex:1;min-width:110px;background:var(--green-l);border-radius:10px;padding:12px 14px;">
-          <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균가 (원/톤)</div>
+          <div style="font-size:11px;color:var(--gray500);font-weight:700;">평균가 (원/톤급)</div>
           <div id="rateAvg" style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px;white-space:nowrap;">—</div>
+        </div>
+      </div>
+      <div id="rateTonSummaryCard" class="card" style="display:none;padding:14px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;">🚚 톤급별 평균 하불금액 — 차량 톤급당 실제 지급된 하불 금액</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr style="background:var(--navy);color:#fff;">
+              <th style="padding:7px 8px;text-align:left;white-space:nowrap;">톤급</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">건수</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">평균 하불금액(원)</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">평균 단가(원/톤급)</th>
+            </tr></thead>
+            <tbody id="rateTonSummaryBody"></tbody>
+          </table>
         </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
@@ -1486,7 +1500,7 @@ style="min-width:100px;">
               <th style="padding:7px 8px;text-align:left;white-space:nowrap;">협력사</th>
               <th style="padding:7px 8px;text-align:right;white-space:nowrap;">중량</th>
               <th style="padding:7px 8px;text-align:right;white-space:nowrap;">하불</th>
-              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">단가(원/톤)</th>
+              <th style="padding:7px 8px;text-align:right;white-space:nowrap;">단가(원/톤급)</th>
             </tr></thead>
             <tbody id="rateBody"></tbody>
           </table>
@@ -1962,6 +1976,32 @@ function renderRateAnalysis(){
   document.getElementById('rateAvg').textContent = fmt(Math.round(avgU)) + '원/톤';
 
   const showTonCol = !ton;
+
+  // 톤급별 평균 하불금액 — "전체 톤급" 조회 시, 차량 톤급(중량)당 실제 지급된 하불 금액을 비교
+  const tonSummaryCard = document.getElementById('rateTonSummaryCard');
+  if (showTonCol) {
+    const byTon = {};
+    items.forEach(r => {
+      const t = r['톤급'] || '—';
+      if (!byTon[t]) byTon[t] = { cnt: 0, costSum: 0, unitSum: 0 };
+      byTon[t].cnt++;
+      byTon[t].costSum += (+r['하불(원)'] || 0);
+      byTon[t].unitSum += r._unit;
+    });
+    const tonRows = Object.entries(byTon)
+      .map(([t, v]) => ({ ton: t, cnt: v.cnt, avgCost: v.costSum / v.cnt, avgUnit: v.unitSum / v.cnt }))
+      .sort((a, b) => b.cnt - a.cnt);
+    document.getElementById('rateTonSummaryBody').innerHTML = tonRows.map(v => `
+      <tr style="border-bottom:1px solid var(--gray100);">
+        <td style="padding:6px 8px;font-weight:700;color:var(--teal-d);white-space:nowrap;">${v.ton}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';white-space:nowrap;">${fmt(v.cnt)}건</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:700;color:var(--gold);white-space:nowrap;">${fmt(Math.round(v.avgCost))}원</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono';font-weight:800;color:var(--teal-d);white-space:nowrap;">${fmt(Math.round(v.avgUnit))}원/톤급</td>
+      </tr>`).join('');
+    tonSummaryCard.style.display = 'block';
+  } else {
+    tonSummaryCard.style.display = 'none';
+  }
 
   document.getElementById('rateThead').innerHTML = `
     <th style="padding:7px 8px;text-align:center;white-space:nowrap;position:relative;">#<div class="resize-handle" onmousedown="startColResize(event,this.parentElement)"></div></th>
