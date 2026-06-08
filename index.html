@@ -1394,24 +1394,19 @@ td.bold { font-weight: 700; color: var(--navy); }
       <div class="page-sub" id="rateSub">벌크운송 · 출발지·도착지·톤급이 같은 건의 하불 단가(원/톤) 최저·최고·평균</div>
     </div>
 
-    <!-- 검색창 (예: "부산 울산 25톤" 처럼 입력하면 일치하는 구간을 추천) -->
-    <div style="position:relative;max-width:480px;margin-bottom:14px;">
-      <input id="rateSearch" class="finp" placeholder="🔍 구간·톤급 검색 (예: 부산 울산 25톤)"
-        style="width:100%;padding:10px 14px;font-size:14px;border:1.5px solid var(--gray200);border-radius:var(--radius-xs);"
-        oninput="onRateSearchInput()" onfocus="onRateSearchInput()"
-        onblur="setTimeout(()=>{const d=document.getElementById('rateSuggest'); if(d) d.style.display='none';}, 150)">
-      <div id="rateSuggest" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
-        background:#fff;border:1px solid var(--gray200);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);
-        max-height:280px;overflow:auto;z-index:50;"></div>
-    </div>
-
     <div class="filter-row">
       <label>출발지</label>
-      <select class="fsel" id="rateFrom" onchange="renderRateAnalysis()"><option value="">선택</option></select>
+      <input class="fsel" id="rateFrom" list="rateFromList" placeholder="🔍 검색 또는 선택" autocomplete="off"
+        oninput="renderRateAnalysis()" onchange="renderRateAnalysis()" style="min-width:120px;">
+      <datalist id="rateFromList"></datalist>
       <label>도착지</label>
-      <select class="fsel" id="rateTo" onchange="renderRateAnalysis()"><option value="">선택</option></select>
+      <input class="fsel" id="rateTo" list="rateToList" placeholder="🔍 검색 또는 선택" autocomplete="off"
+        oninput="renderRateAnalysis()" onchange="renderRateAnalysis()" style="min-width:120px;">
+      <datalist id="rateToList"></datalist>
       <label>톤급</label>
-      <select class="fsel" id="rateTon" onchange="renderRateAnalysis()"><option value="">선택</option></select>
+      <input class="fsel" id="rateTon" list="rateTonList" placeholder="🔍 검색 또는 선택" autocomplete="off"
+        oninput="renderRateAnalysis()" onchange="renderRateAnalysis()" style="min-width:100px;">
+      <datalist id="rateTonList"></datalist>
       <button onclick="resetRateFilters()" style="border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);border-radius:var(--radius-xs);padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">초기화</button>
     </div>
 
@@ -1699,73 +1694,22 @@ function resetClientFilters(){
 // ══════════════════════════════════════════════════════
 function populateRateSelects(){
   const bulk = allData.filter(r => r['용역구분']==='벌크운송');
-  const fill = (id, arr) => {
-    const el = document.getElementById(id); if (!el) return;
-    const prev = el.value;
-    el.innerHTML = '<option value="">선택</option>' + arr.map(v=>`<option value="${v}">${v}</option>`).join('');
-    el.value = arr.includes(prev) ? prev : '';
+  // input + datalist 콤보박스: 옵션 목록을 datalist에 채워 타이핑하면 검색되도록 함
+  const fill = (inputId, listId, arr) => {
+    const input = document.getElementById(inputId);
+    const list  = document.getElementById(listId);
+    if (!input || !list) return;
+    const prev = input.value;
+    list.innerHTML = arr.map(v=>`<option value="${v}"></option>`).join('');
+    input.value = arr.includes(prev) ? prev : '';
   };
-  fill('rateFrom', [...new Set(bulk.map(r=>r['출발지']).filter(Boolean))].sort());
-  fill('rateTo',   [...new Set(bulk.map(r=>r['도착지']).filter(Boolean))].sort());
-  fill('rateTon',  [...new Set(bulk.map(r=>r['톤급']).filter(Boolean))].sort());
-  _rateCombos = []; // 검색 추천 캐시 초기화 — 다음 검색 시 새 데이터로 재생성
+  fill('rateFrom', 'rateFromList', [...new Set(bulk.map(r=>r['출발지']).filter(Boolean))].sort());
+  fill('rateTo',   'rateToList',   [...new Set(bulk.map(r=>r['도착지']).filter(Boolean))].sort());
+  fill('rateTon',  'rateTonList',  [...new Set(bulk.map(r=>r['톤급']).filter(Boolean))].sort());
 }
 
 function resetRateFilters(){
   ['rateFrom','rateTo','rateTon'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  const s = document.getElementById('rateSearch'); if (s) s.value = '';
-  renderRateAnalysis();
-}
-
-// 구간 검색창 — "부산 울산 25톤"처럼 입력하면 일치하는 출발지·도착지·톤급 조합을 추천
-let _rateCombos = []; // [{from,to,ton,cnt}]
-function _buildRateCombos(){
-  const map = {};
-  allData.filter(r=>r['용역구분']==='벌크운송').forEach(r=>{
-    const from=r['출발지']||'', to=r['도착지']||'', ton=r['톤급']||'';
-    if(!from || !to || !ton) return;
-    const key = from+'|'+to+'|'+ton;
-    if(!map[key]) map[key]={from,to,ton,cnt:0};
-    map[key].cnt++;
-  });
-  _rateCombos = Object.values(map).sort((a,b)=>b.cnt-a.cnt);
-}
-
-function onRateSearchInput(){
-  const box = document.getElementById('rateSuggest');
-  const q = document.getElementById('rateSearch').value.trim().toLowerCase();
-  if(!_rateCombos.length) _buildRateCombos();
-
-  let list = _rateCombos;
-  if(q){
-    const terms = q.split(/\s+/).filter(Boolean);
-    list = _rateCombos.filter(c=>{
-      const hay = (c.from+' '+c.to+' '+c.ton).toLowerCase();
-      return terms.every(t=>hay.includes(t));
-    });
-  }
-  list = list.slice(0, 30);
-
-  if(!list.length){
-    box.innerHTML = `<div style="padding:14px;text-align:center;color:var(--gray400);font-size:13px;">일치하는 구간이 없습니다</div>`;
-  } else {
-    box.innerHTML = list.map(c=>`
-      <div onmousedown="selectRateCombo('${c.from.replace(/'/g,"\\'")}','${c.to.replace(/'/g,"\\'")}','${c.ton.replace(/'/g,"\\'")}')"
-        style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray100);display:flex;align-items:center;justify-content:space-between;gap:10px;"
-        onmouseover="this.style.background='var(--gray50)'" onmouseout="this.style.background=''">
-        <span style="font-weight:700;color:var(--navy);font-size:13px;">🚛 ${c.from} → ${c.to} <span style="color:var(--teal-d);">· ${c.ton}</span></span>
-        <span style="font-size:11px;color:var(--gray400);white-space:nowrap;">${c.cnt}건</span>
-      </div>`).join('');
-  }
-  box.style.display = 'block';
-}
-
-function selectRateCombo(from, to, ton){
-  document.getElementById('rateFrom').value = from;
-  document.getElementById('rateTo').value = to;
-  document.getElementById('rateTon').value = ton;
-  document.getElementById('rateSearch').value = `${from} → ${to} · ${ton}`;
-  document.getElementById('rateSuggest').style.display = 'none';
   renderRateAnalysis();
 }
 
@@ -1774,9 +1718,9 @@ function renderRateAnalysis(){
   const card  = document.getElementById('rateResultCard');
   if (!empty || !card) return; // 아직 데이터 미로드 시점 등
 
-  const from = document.getElementById('rateFrom').value;
-  const to   = document.getElementById('rateTo').value;
-  const ton  = document.getElementById('rateTon').value;
+  const from = document.getElementById('rateFrom').value.trim();
+  const to   = document.getElementById('rateTo').value.trim();
+  const ton  = document.getElementById('rateTon').value.trim();
 
   if (!from || !to || !ton) {
     card.style.display = 'none';
