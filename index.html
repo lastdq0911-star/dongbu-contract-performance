@@ -2176,12 +2176,12 @@ function applyTableColHide() {
 function setupDynColDrag(tableId) {
   const table = document.getElementById(tableId); if (!table) return;
   const ths = [...table.querySelectorAll('thead tr th')];
-  let dragSrc = -1;
-  ths.forEach((th, i) => {
+  let dragSrcEl = null;
+  ths.forEach((th) => {
     th.draggable = true;
     th.classList.add('th-draggable');
     th.addEventListener('dragstart', e => {
-      dragSrc = i; e.dataTransfer.effectAllowed = 'move';
+      dragSrcEl = th; e.dataTransfer.effectAllowed = 'move';
       setTimeout(() => th.classList.add('th-dragging'), 0);
     });
     th.addEventListener('dragend', () => {
@@ -2192,19 +2192,24 @@ function setupDynColDrag(tableId) {
     th.addEventListener('dragleave', () => th.classList.remove('th-drop-target'));
     th.addEventListener('drop', e => {
       e.preventDefault(); th.classList.remove('th-drop-target');
-      if (dragSrc < 0 || dragSrc === i) return;
+      if (!dragSrcEl || dragSrcEl === th) return;
       const htr = table.querySelector('thead tr');
+      const curThs = [...htr.children];
+      const srcIdx = curThs.indexOf(dragSrcEl);
+      const dstIdx = curThs.indexOf(th);
+      if (srcIdx < 0 || dstIdx < 0) return;
       // 헤더 이동
-      if (dragSrc < i) htr.insertBefore(ths[dragSrc], th.nextSibling);
-      else             htr.insertBefore(ths[dragSrc], th);
-      // 본문 각 행 이동
+      if (srcIdx < dstIdx) htr.insertBefore(dragSrcEl, th.nextSibling);
+      else                 htr.insertBefore(dragSrcEl, th);
+      // 본문 각 행 이동 (해당 인덱스의 셀 전체를 함께 이동)
       table.querySelectorAll('tbody tr').forEach(tr => {
         const cells = [...tr.children];
-        if (cells.length <= Math.max(dragSrc, i)) return;
-        if (dragSrc < i) tr.insertBefore(cells[dragSrc], cells[i].nextSibling);
-        else             tr.insertBefore(cells[dragSrc], cells[i]);
+        if (cells.length <= Math.max(srcIdx, dstIdx)) return;
+        const srcCell = cells[srcIdx], dstCell = cells[dstIdx];
+        if (srcIdx < dstIdx) tr.insertBefore(srcCell, dstCell.nextSibling);
+        else                 tr.insertBefore(srcCell, dstCell);
       });
-      dragSrc = -1;
+      dragSrcEl = null;
     });
   });
 }
