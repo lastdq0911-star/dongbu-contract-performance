@@ -560,12 +560,9 @@ td.bold { font-weight: 700; color: var(--navy); }
   color: var(--navy); outline: none;
 }
 .finp:focus { border-color: var(--teal); }
-/* 컨테이너운송 전용 컬럼: 용역 필터=컨테이너운송일 때만 노출 (노란 음영) */
+/* 컨테이너운송 전용 컬럼: 용역 필터=컨테이너운송일 때만 노출 */
 .col-ctn-extra { display: none; }
 .show-ctn-cols .col-ctn-extra { display: table-cell; }
-#mainTable thead .col-ctn-extra { background: #FBC02D; color: var(--navy); }
-#mainTable tbody .col-ctn-extra { background: #FFF9C4; }
-#mainTable tbody tr:first-child .col-ctn-extra { background: var(--teal-ll); }
 .rate-combo-box {
   display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px;
   background: #fff; border: 1px solid var(--gray200); border-radius: 10px;
@@ -4796,14 +4793,14 @@ function renderPreview(rows){
   // 업로드 데이터 중 컨테이너운송 건이 있으면 전용 컬럼(노란 음영) 표시
   const showCtn = rows.some(r=>r['용역구분']==='컨테이너운송');
   const ctnTh = `
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">추가협력사</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">작업화주명</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">세부용역</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">할증명</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">SZ</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">청구금액</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">청구화주</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;background:#FBC02D;color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;">하차지</th>`;
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">추가협력사</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">작업화주명</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">세부용역</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">할증명</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">SZ</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">청구금액</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">청구화주</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">하차지</th>`;
   // 전체데이터와 동일한 컬럼 구성 (상태 열 제외)
   area.innerHTML=`<div class="tbl-wrap"><table style="table-layout:fixed;min-width:940px;" class="${showCtn?'show-ctn-cols':''}">
     <colgroup>
@@ -4849,14 +4846,14 @@ function renderPreview(rows){
       <td style="padding:7px 6px;text-align:right;white-space:nowrap;"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
       <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['비고']||''}">${r['비고']||'—'}</td>
       <td style="padding:7px 6px;text-align:center;"><button onclick="deletePreviewRow(${i})" title="이 행 삭제" style="background:none;border:none;cursor:pointer;color:var(--red,#e5484d);font-size:14px;font-weight:800;line-height:1;padding:2px 4px;">✕</button></td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['추가협력사']||''}">${r['추가협력사']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['작업화주명']||''}">${r['작업화주명']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['할증명']||''}">${r['할증명']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;font-family:'DM Mono';text-align:center;white-space:nowrap;">${r['SZ']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--navy);white-space:nowrap;">${r['청구금액']?fmt(r['청구금액']):'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['청구화주']||''}">${r['청구화주']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;background:#FFF9C4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['추가협력사']||''}">${r['추가협력사']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['작업화주명']||''}">${r['작업화주명']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['할증명']||''}">${r['할증명']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;font-family:'DM Mono';text-align:center;white-space:nowrap;">${r['SZ']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--navy);white-space:nowrap;">${r['청구금액']?fmt(r['청구금액']):'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['청구화주']||''}">${r['청구화주']||'—'}</td>
+      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>
   ${(rows.length>100 && !previewShowAll)?`<div style="text-align:center;margin-top:8px;">
@@ -4929,6 +4926,6 @@ _sb.auth.onAuthStateChange((event, sess) => {
   runAccessCheck(sess?.user || null);
 });
 </script>
-<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v9</div>
+<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v10</div>
 </body>
 </html>
