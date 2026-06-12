@@ -4636,7 +4636,9 @@ async function aiMap(headers, sampleRows){
 원본 컬럼: ${JSON.stringify(headers)}
 샘플 (5행): ${JSON.stringify(sampleRows.slice(0,5),null,2)}
 
-매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/청구/수입), 하불(원)(하불/원가/지급/비용), 용역구분(서비스종류), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), 추가협력사(추가 협력사), 작업화주명(작업 화주), 세부용역(용역), 할증명(할증), SZ(SZ/규격/size), 청구금액(청구 금액), 청구화주(청구 화주), 하차지(하차 지)
+매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/수입/운임 — 청구금액과는 다른 컬럼), 하불(원)(하불/원가/지급/비용), 용역구분(용역 대분류/서비스종류, 예: 컨테이너운송·벌크운송), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), 추가협력사(추가 협력사), 작업화주명(작업 화주), 세부용역(용역구분과는 별개의 '용역' 상세 항목 컬럼, 컨테이너운송 전용), 할증명(할증), SZ(SZ/규격/size), 청구금액(청구 금액 — 매출과는 다른 컬럼, 컨테이너운송 전용), 청구화주(청구 화주), 하차지(하차 지)
+
+주의: 매출(원)과 청구금액은 서로 다른 컬럼입니다. 같은 헤더를 두 필드에 중복 매핑하지 마세요. 마찬가지로 용역구분과 세부용역도 서로 다른 컬럼이면 별도로 매핑하세요.
 
 JSON만 응답:
 {"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null,"추가협력사":null,"작업화주명":null,"세부용역":null,"할증명":null,"SZ":null,"청구금액":null,"청구화주":null,"하차지":null}`;
@@ -4663,10 +4665,12 @@ function ruleMap(headers){
   const find=kws=>headers.find(h=>kws.some(k=>lc(h).includes(lc(k))))||null;
   // 정확한 컬럼명 우선 매칭
   const exact=kws=>headers.find(h=>kws.some(k=>h.trim()===k||lc(h)===lc(k)))||null;
+  // '용역구분'과 겹치지 않는 '용역' 단독 컬럼만 찾기 (세부용역용)
+  const findPlain=kws=>headers.find(h=>!lc(h).includes('구분')&&kws.some(k=>lc(h).includes(lc(k))))||null;
   return {
     '협력사명':     exact(['협력사명'])||find(['협력사','업체','거래처','vendor','partner']),
     '고객(화주)':   exact(['고객(화주)','고객','화주'])||find(['화주','고객','발주처','작업화주','청구화주명']),
-    '매출(원)':     exact(['청구','매출(원)','청구금액'])||find(['매출','청구trf','수입','revenue','청구금']),
+    '매출(원)':     exact(['매출(원)','매출액','매출금액'])||find(['매출','청구trf','수입','revenue','운임']),
     '하불(원)':     exact(['하불(원)','하불금액'])||find(['하불','원가','지급','cost','하불trf']),
     '용역구분':     exact(['용역'])||find(['용역','서비스','구분','category']),
     '계약유형':     find(['계약유형','계약방법']),
@@ -4683,7 +4687,7 @@ function ruleMap(headers){
     // 컨테이너운송 전용 필드
     '추가협력사':   exact(['추가협력사'])||find(['추가협력사','추가 협력사']),
     '작업화주명':   exact(['작업화주명'])||find(['작업화주','작업 화주']),
-    '세부용역':     exact(['용역'])||find(['용역']),
+    '세부용역':     exact(['용역','세부용역'])||findPlain(['용역']),
     '할증명':       exact(['할증명'])||find(['할증']),
     'SZ':           exact(['SZ'])||find(['sz','규격','size']),
     '청구금액':     exact(['청구금액'])||find(['청구금액','청구 금액']),
@@ -4925,6 +4929,6 @@ _sb.auth.onAuthStateChange((event, sess) => {
   runAccessCheck(sess?.user || null);
 });
 </script>
-<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v8</div>
+<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v9</div>
 </body>
 </html>
