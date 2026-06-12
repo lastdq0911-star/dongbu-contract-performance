@@ -1255,14 +1255,9 @@ td.bold { font-weight: 700; color: var(--navy); }
             <col style="width:62px">   <!-- 업로더 -->
             <col style="width:30px">   <!-- 관리 -->
             <!-- 컨테이너운송 전용 (용역 필터=컨테이너운송 일 때만 표시) -->
-            <col class="col-ctn-extra" style="width:90px">   <!-- 추가협력사 -->
-            <col class="col-ctn-extra" style="width:90px">   <!-- 작업화주명 -->
-            <col class="col-ctn-extra" style="width:70px">   <!-- 세부용역 -->
-            <col class="col-ctn-extra" style="width:80px">   <!-- 할증명 -->
+            <col class="col-ctn-extra" style="width:90px">   <!-- 용역명 -->
             <col class="col-ctn-extra" style="width:50px">   <!-- SZ -->
-            <col class="col-ctn-extra" style="width:100px">  <!-- 청구금액 -->
-            <col class="col-ctn-extra" style="width:90px">   <!-- 청구화주 -->
-            <col class="col-ctn-extra" style="width:75px">   <!-- 하차지 -->
+            <col class="col-ctn-extra" style="width:90px">   <!-- 하차지 -->
           </colgroup>
           <thead id="tblHead" oncontextmenu="openColCtxTable(event)">
             <tr>
@@ -1282,14 +1277,9 @@ td.bold { font-weight: 700; color: var(--navy); }
               <th><div class="th-inner">S/O명<button class="col-filter-btn" onclick="openColFilter(event,'비고')">▾</button></div></th>
               <th><div class="th-inner">업로더<button class="col-filter-btn" onclick="openColFilter(event,'_uploader')">▾</button></div></th>
               <th></th>
-              <!-- 컨테이너운송 전용 (노란 음영) -->
-              <th class="col-ctn-extra">추가협력사</th>
-              <th class="col-ctn-extra">작업화주명</th>
-              <th class="col-ctn-extra">세부용역</th>
-              <th class="col-ctn-extra">할증명</th>
+              <!-- 컨테이너운송 전용 -->
+              <th class="col-ctn-extra">용역명</th>
               <th class="col-ctn-extra">SZ</th>
-              <th class="col-ctn-extra" style="text-align:right">청구금액</th>
-              <th class="col-ctn-extra">청구화주</th>
               <th class="col-ctn-extra">하차지</th>
             </tr>
           </thead>
@@ -1664,9 +1654,9 @@ const COLS = ['연도','월','지사','협력사명','고객(화주)','용역구
               '매출(원)','하불(원)','공헌이익(원)','공헌이익률',
               '톤급','중량','청구요율구분','출발지','도착지',
               '물량(건/톤)','계약기간_시작','계약기간_종료','계약상태','비고',
-              '추가협력사','작업화주명','세부용역','할증명','SZ','청구금액','청구화주','하차지'];
-// 컨테이너운송 전용 추가 컬럼 (전체데이터 표에서 노란 음영으로 표시)
-const CTN_EXTRA_COLS = ['추가협력사','작업화주명','세부용역','할증명','SZ','청구금액','청구화주','하차지'];
+              '세부용역','SZ','하차지'];
+// 컨테이너운송 전용 추가 컬럼 (전체데이터 표에서 용역=컨테이너운송일 때만 표시)
+const CTN_EXTRA_COLS = ['세부용역','SZ','하차지'];
 const CATKEYS = {
   '컨테이너운송':['컨테이너','container','ctn','fcl','lcl','컨운','컨헤','컨테'],
   '벌크운송':    ['벌크','bulk','bulk 육송','육송','화물운송','일반운송','평판','카고'],
@@ -2466,10 +2456,8 @@ function rowToDb(r) {
     contract_start:String(r['계약기간_시작']||''), contract_end:String(r['계약기간_종료']||''),
     contract_status:String(r['계약상태']||''), note:String(r['비고']||''),
     uploader:r['_uploader']||'',
-    extra_partner:String(r['추가협력사']||''), work_client:String(r['작업화주명']||''),
-    service_detail:String(r['세부용역']||''), surcharge_name:String(r['할증명']||''),
-    sz_code:String(r['SZ']||''), billing_amount:+r['청구금액']||0,
-    billing_client:String(r['청구화주']||''), drop_point:String(r['하차지']||''),
+    service_detail:String(r['세부용역']||''),
+    sz_code:String(r['SZ']||''), drop_point:String(r['하차지']||''),
   };
 }
 // DB 컬럼 → 한국어 필드
@@ -2484,10 +2472,8 @@ function dbToRow(d) {
     '청구요율구분':d.billing_rate_type, '출발지':d.departure, '도착지':d.destination,
     '물량(건/톤)':d.volume, '계약기간_시작':d.contract_start, '계약기간_종료':d.contract_end,
     '계약상태':d.contract_status, '비고':d.note,
-    '추가협력사':d.extra_partner||'', '작업화주명':d.work_client||'',
-    '세부용역':d.service_detail||'', '할증명':d.surcharge_name||'',
-    'SZ':d.sz_code||'', '청구금액':d.billing_amount||'',
-    '청구화주':d.billing_client||'', '하차지':d.drop_point||'',
+    '세부용역':d.service_detail||'',
+    'SZ':d.sz_code||'', '하차지':d.drop_point||'',
   };
 }
 
@@ -3663,7 +3649,6 @@ function renderTable() {
   const tRev = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
   const tCost= data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
   const tCI  = data.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0);
-  const tBilling = data.reduce((s,r)=>s+(+r['청구금액']||0),0);
   const totalRow = `<tr style="background:var(--teal-ll);font-weight:800;">
     <td style="color:var(--navy);white-space:nowrap;">합계 ${data.length}건</td>
     <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
@@ -3672,9 +3657,7 @@ function renderTable() {
     <td class="num" style="color:var(--green);">${fmt(tCI)}</td>
     <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
     <td></td><td></td><td></td>
-    <td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td>
-    <td class="col-ctn-extra num" style="color:var(--navy);">${tBilling?fmt(tBilling):''}</td>
-    <td class="col-ctn-extra"></td><td class="col-ctn-extra"></td>
+    <td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td>
   </tr>`;
   tb.innerHTML = totalRow + shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
@@ -3693,13 +3676,8 @@ function renderTable() {
     <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['비고']||''}">${r['비고']||'—'}</td>
     <td style="overflow:hidden;text-overflow:ellipsis;font-size:10.5px;color:var(--teal);font-weight:600;" title="${r['_uploader']||''}">${r['_uploader']||'—'}</td>
     <td><button onclick="deleteRow(${i})" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:3px 5px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700;">삭제</button></td>
-    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['추가협력사']||''}">${r['추가협력사']||'—'}</td>
-    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['작업화주명']||''}">${r['작업화주명']||'—'}</td>
     <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
-    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['할증명']||''}">${r['할증명']||'—'}</td>
     <td class="col-ctn-extra mono" style="text-align:center;">${r['SZ']||'—'}</td>
-    <td class="col-ctn-extra num">${r['청구금액']?fmt(r['청구금액']):'—'}</td>
-    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['청구화주']||''}">${r['청구화주']||'—'}</td>
     <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
   </tr>`).join('');
   if(!tableShowAll && data.length > 200) {
@@ -4633,12 +4611,12 @@ async function aiMap(headers, sampleRows){
 원본 컬럼: ${JSON.stringify(headers)}
 샘플 (5행): ${JSON.stringify(sampleRows.slice(0,5),null,2)}
 
-매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/수입/운임 — 청구금액과는 다른 컬럼), 하불(원)(하불/원가/지급/비용), 용역구분(용역 대분류/서비스종류, 예: 컨테이너운송·벌크운송), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), 추가협력사(추가 협력사), 작업화주명(작업 화주), 세부용역(용역구분과는 별개의 '용역' 상세 항목 컬럼, 컨테이너운송 전용), 할증명(할증), SZ(SZ/규격/size), 청구금액(청구 금액 — 매출과는 다른 컬럼, 컨테이너운송 전용), 청구화주(청구 화주), 하차지(하차 지)
+매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/수입/운임), 하불(원)(하불/원가/지급/비용), 용역구분(용역 대분류/서비스종류, 예: 컨테이너운송·벌크운송), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), 세부용역(용역구분과는 별개의 '용역' 상세 항목 컬럼, 컨테이너운송 전용), SZ(SZ/규격/size), 하차지(하차 지)
 
-주의: 매출(원)과 청구금액은 서로 다른 컬럼입니다. 같은 헤더를 두 필드에 중복 매핑하지 마세요. 마찬가지로 용역구분과 세부용역도 서로 다른 컬럼이면 별도로 매핑하세요.
+주의: 용역구분과 세부용역은 서로 다른 컬럼이면 별도로 매핑하세요.
 
 JSON만 응답:
-{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null,"추가협력사":null,"작업화주명":null,"세부용역":null,"할증명":null,"SZ":null,"청구금액":null,"청구화주":null,"하차지":null}`;
+{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null,"세부용역":null,"SZ":null,"하차지":null}`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -4682,13 +4660,8 @@ function ruleMap(headers){
     '출발지':       exact(['출발지'])||find(['출발','origin','from지','출발지']),
     '도착지':       exact(['도착지'])||find(['도착','destination','to지','도착지']),
     // 컨테이너운송 전용 필드
-    '추가협력사':   exact(['추가협력사'])||find(['추가협력사','추가 협력사']),
-    '작업화주명':   exact(['작업화주명'])||find(['작업화주','작업 화주']),
     '세부용역':     exact(['용역','세부용역'])||findPlain(['용역']),
-    '할증명':       exact(['할증명'])||find(['할증']),
     'SZ':           exact(['SZ'])||find(['sz','규격','size']),
-    '청구금액':     exact(['청구금액'])||find(['청구금액','청구 금액']),
-    '청구화주':     exact(['청구화주'])||find(['청구화주','청구 화주']),
     '하차지':       exact(['하차지'])||find(['하차지','하차 지']),
   };
 }
@@ -4742,10 +4715,7 @@ function extract(rows,map,year,month,branch){
       '계약기간_시작':fd2(map['계약기간_시작']?row[map['계약기간_시작']]:''),
       '계약기간_종료':fd2(map['계약기간_종료']?row[map['계약기간_종료']]:''),
       '계약상태':g('계약상태')||'진행중','비고':g('비고'),
-      '추가협력사':g('추가협력사'),'작업화주명':g('작업화주명'),
-      '세부용역':g('세부용역'),'할증명':g('할증명'),
-      'SZ':g('SZ'),'청구금액':gn('청구금액')||'',
-      '청구화주':g('청구화주'),'하차지':g('하차지'),
+      '세부용역':g('세부용역'),'SZ':g('SZ'),'하차지':g('하차지'),
     };
   }).filter(Boolean);
 }
@@ -4793,13 +4763,8 @@ function renderPreview(rows){
   // 업로드 데이터 중 컨테이너운송 건이 있으면 전용 컬럼(노란 음영) 표시
   const showCtn = rows.some(r=>r['용역구분']==='컨테이너운송');
   const ctnTh = `
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">추가협력사</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">작업화주명</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">세부용역</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">할증명</th>
+      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">용역명</th>
       <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">SZ</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">청구금액</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">청구화주</th>
       <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">하차지</th>`;
   // 전체데이터와 동일한 컬럼 구성 (상태 열 제외)
   area.innerHTML=`<div class="tbl-wrap"><table style="table-layout:fixed;min-width:940px;" class="${showCtn?'show-ctn-cols':''}">
@@ -4808,10 +4773,9 @@ function renderPreview(rows){
       <col style="width:74px"><col style="width:80px"><col style="width:80px"><col style="width:55px">
       <col style="width:55px"><col style="width:105px"><col style="width:105px"><col style="width:105px">
       <col style="width:60px"><col style="width:90px"><col style="width:42px">
-      <col class="col-ctn-extra" style="width:90px"><col class="col-ctn-extra" style="width:90px">
-      <col class="col-ctn-extra" style="width:70px"><col class="col-ctn-extra" style="width:80px">
-      <col class="col-ctn-extra" style="width:50px"><col class="col-ctn-extra" style="width:100px">
-      <col class="col-ctn-extra" style="width:90px"><col class="col-ctn-extra" style="width:75px">
+      <col class="col-ctn-extra" style="width:90px">
+      <col class="col-ctn-extra" style="width:50px">
+      <col class="col-ctn-extra" style="width:90px">
     </colgroup>
     <thead><tr style="background:var(--navy);">
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">지사</th>
@@ -4846,13 +4810,8 @@ function renderPreview(rows){
       <td style="padding:7px 6px;text-align:right;white-space:nowrap;"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
       <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['비고']||''}">${r['비고']||'—'}</td>
       <td style="padding:7px 6px;text-align:center;"><button onclick="deletePreviewRow(${i})" title="이 행 삭제" style="background:none;border:none;cursor:pointer;color:var(--red,#e5484d);font-size:14px;font-weight:800;line-height:1;padding:2px 4px;">✕</button></td>
-      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['추가협력사']||''}">${r['추가협력사']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['작업화주명']||''}">${r['작업화주명']||'—'}</td>
       <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['할증명']||''}">${r['할증명']||'—'}</td>
       <td class="col-ctn-extra" style="padding:7px 6px;font-family:'DM Mono';text-align:center;white-space:nowrap;">${r['SZ']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--navy);white-space:nowrap;">${r['청구금액']?fmt(r['청구금액']):'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['청구화주']||''}">${r['청구화주']||'—'}</td>
       <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>
@@ -4926,6 +4885,6 @@ _sb.auth.onAuthStateChange((event, sess) => {
   runAccessCheck(sess?.user || null);
 });
 </script>
-<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v10</div>
+<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v11</div>
 </body>
 </html>
