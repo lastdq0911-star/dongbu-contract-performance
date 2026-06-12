@@ -560,6 +560,12 @@ td.bold { font-weight: 700; color: var(--navy); }
   color: var(--navy); outline: none;
 }
 .finp:focus { border-color: var(--teal); }
+/* 컨테이너운송 전용 컬럼: 용역 필터=컨테이너운송일 때만 노출 (노란 음영) */
+#mainTable .col-ctn-extra { display: none; }
+#mainTable.show-ctn-cols .col-ctn-extra { display: table-cell; }
+#mainTable thead .col-ctn-extra { background: #FBC02D; color: var(--navy); }
+#mainTable tbody .col-ctn-extra { background: #FFF9C4; }
+#mainTable tbody tr:first-child .col-ctn-extra { background: var(--teal-ll); }
 .rate-combo-box {
   display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px;
   background: #fff; border: 1px solid var(--gray200); border-radius: 10px;
@@ -1251,6 +1257,15 @@ td.bold { font-weight: 700; color: var(--navy); }
             <col style="width:82px">   <!-- S/O명 -->
             <col style="width:62px">   <!-- 업로더 -->
             <col style="width:30px">   <!-- 관리 -->
+            <!-- 컨테이너운송 전용 (용역 필터=컨테이너운송 일 때만 표시) -->
+            <col class="col-ctn-extra" style="width:90px">   <!-- 추가협력사 -->
+            <col class="col-ctn-extra" style="width:90px">   <!-- 작업화주명 -->
+            <col class="col-ctn-extra" style="width:70px">   <!-- 세부용역 -->
+            <col class="col-ctn-extra" style="width:80px">   <!-- 할증명 -->
+            <col class="col-ctn-extra" style="width:50px">   <!-- SZ -->
+            <col class="col-ctn-extra" style="width:100px">  <!-- 청구금액 -->
+            <col class="col-ctn-extra" style="width:90px">   <!-- 청구화주 -->
+            <col class="col-ctn-extra" style="width:75px">   <!-- 하차지 -->
           </colgroup>
           <thead id="tblHead" oncontextmenu="openColCtxTable(event)">
             <tr>
@@ -1270,10 +1285,19 @@ td.bold { font-weight: 700; color: var(--navy); }
               <th><div class="th-inner">S/O명<button class="col-filter-btn" onclick="openColFilter(event,'비고')">▾</button></div></th>
               <th><div class="th-inner">업로더<button class="col-filter-btn" onclick="openColFilter(event,'_uploader')">▾</button></div></th>
               <th></th>
+              <!-- 컨테이너운송 전용 (노란 음영) -->
+              <th class="col-ctn-extra">추가협력사</th>
+              <th class="col-ctn-extra">작업화주명</th>
+              <th class="col-ctn-extra">세부용역</th>
+              <th class="col-ctn-extra">할증명</th>
+              <th class="col-ctn-extra">SZ</th>
+              <th class="col-ctn-extra" style="text-align:right">청구금액</th>
+              <th class="col-ctn-extra">청구화주</th>
+              <th class="col-ctn-extra">하차지</th>
             </tr>
           </thead>
           <tbody id="tblBody">
-            <tr><td colspan="16" class="tbl-empty-state" style="text-align:center;padding:48px;color:var(--gray400);">
+            <tr><td colspan="100%" class="tbl-empty-state" style="text-align:center;padding:48px;color:var(--gray400);">
               <div style="font-size:28px;margin-bottom:10px;">🔍</div>
               <div style="font-size:14px;font-weight:700;color:var(--gray500);margin-bottom:6px;">조건을 선택하고 조회하세요</div>
               <div style="font-size:12px;">지사·연도·월 등 조건 설정 후 <strong style="color:var(--teal);">조회</strong> 버튼을 누르세요</div>
@@ -1642,7 +1666,10 @@ style="min-width:100px;">
 const COLS = ['연도','월','지사','협력사명','고객(화주)','용역구분','계약유형',
               '매출(원)','하불(원)','공헌이익(원)','공헌이익률',
               '톤급','중량','청구요율구분','출발지','도착지',
-              '물량(건/톤)','계약기간_시작','계약기간_종료','계약상태','비고'];
+              '물량(건/톤)','계약기간_시작','계약기간_종료','계약상태','비고',
+              '추가협력사','작업화주명','세부용역','할증명','SZ','청구금액','청구화주','하차지'];
+// 컨테이너운송 전용 추가 컬럼 (전체데이터 표에서 노란 음영으로 표시)
+const CTN_EXTRA_COLS = ['추가협력사','작업화주명','세부용역','할증명','SZ','청구금액','청구화주','하차지'];
 const CATKEYS = {
   '컨테이너운송':['컨테이너','container','ctn','fcl','lcl','컨운','컨헤','컨테'],
   '벌크운송':    ['벌크','bulk','bulk 육송','육송','화물운송','일반운송','평판','카고'],
@@ -2166,7 +2193,7 @@ function applyTableColHide() {
       if (tr.children[visPos]) tr.children[visPos].style.display = 'none';
     });
     table.querySelectorAll('tbody tr').forEach(tr => {
-      if (tr.children.length === TBL_COL_COUNT && tr.children[visPos])
+      if (tr.children.length >= TBL_COL_COUNT && tr.children[visPos])
         tr.children[visPos].style.display = 'none';
     });
   });
@@ -2442,6 +2469,10 @@ function rowToDb(r) {
     contract_start:String(r['계약기간_시작']||''), contract_end:String(r['계약기간_종료']||''),
     contract_status:String(r['계약상태']||''), note:String(r['비고']||''),
     uploader:r['_uploader']||'',
+    extra_partner:String(r['추가협력사']||''), work_client:String(r['작업화주명']||''),
+    service_detail:String(r['세부용역']||''), surcharge_name:String(r['할증명']||''),
+    sz_code:String(r['SZ']||''), billing_amount:+r['청구금액']||0,
+    billing_client:String(r['청구화주']||''), drop_point:String(r['하차지']||''),
   };
 }
 // DB 컬럼 → 한국어 필드
@@ -2456,6 +2487,10 @@ function dbToRow(d) {
     '청구요율구분':d.billing_rate_type, '출발지':d.departure, '도착지':d.destination,
     '물량(건/톤)':d.volume, '계약기간_시작':d.contract_start, '계약기간_종료':d.contract_end,
     '계약상태':d.contract_status, '비고':d.note,
+    '추가협력사':d.extra_partner||'', '작업화주명':d.work_client||'',
+    '세부용역':d.service_detail||'', '할증명':d.surcharge_name||'',
+    'SZ':d.sz_code||'', '청구금액':d.billing_amount||'',
+    '청구화주':d.billing_client||'', '하차지':d.drop_point||'',
   };
 }
 
@@ -3554,17 +3589,23 @@ function applyTableColOrder(){
   const head=document.getElementById('tblHead'); if(!head) return;
   if(!_cacheTableOriginals()) return;
   const table=head.closest('table');
-  // 헤더 재배치 (원본 노드 사용)
+  // 헤더 재배치 (원본 노드 사용) — 컨테이너 전용 추가 열(16번 이후)은 항상 맨 끝 고정
   const htr=head.querySelector('tr');
   colOrder.forEach(i=>{ if(_origThs[i]) htr.appendChild(_origThs[i]); });
+  _origThs.slice(TBL_COL_COUNT).forEach(th=>htr.appendChild(th));
   // colgroup 재배치
   const cg=table.querySelector('colgroup');
-  if(cg) colOrder.forEach(i=>{ if(_origCols[i]) cg.appendChild(_origCols[i]); });
-  // 본문: 16칸짜리 행만 재배치
+  if(cg) {
+    colOrder.forEach(i=>{ if(_origCols[i]) cg.appendChild(_origCols[i]); });
+    _origCols.slice(TBL_COL_COUNT).forEach(c=>cg.appendChild(c));
+  }
+  // 본문: 앞 16칸만 colOrder 적용, 컨테이너 전용 추가 셀(있는 경우)은 그대로 끝에 유지
   table.querySelectorAll('#tblBody tr').forEach(tr=>{
-    if(tr.children.length!==TBL_COL_COUNT) return;
+    if(tr.children.length<TBL_COL_COUNT) return;
     const cells=[...tr.children];
+    const extra=cells.slice(TBL_COL_COUNT);
     colOrder.forEach(i=>tr.appendChild(cells[i]));
+    extra.forEach(c=>tr.appendChild(c));
   });
 }
 
@@ -3577,7 +3618,7 @@ function renderTable() {
   // 조회 버튼을 누르기 전: 빈 안내 상태 유지
   if (!tableSearched) {
     document.getElementById('tblCount').textContent = '조건 선택 후 조회하세요';
-    tb.innerHTML = `<tr><td colspan="16" style="text-align:center;padding:48px;color:var(--gray400);">
+    tb.innerHTML = `<tr><td colspan="100%" style="text-align:center;padding:48px;color:var(--gray400);">
       <div style="font-size:28px;margin-bottom:10px;">🔍</div>
       <div style="font-size:14px;font-weight:700;color:var(--gray500);margin-bottom:6px;">조건을 선택하고 조회하세요</div>
       <div style="font-size:12px;">지사·연도·월 등 조건 설정 후 <strong style="color:var(--teal);">조회</strong> 버튼을 누르세요</div>
@@ -3611,13 +3652,21 @@ function renderTable() {
   const rawData = filteredIndices.map(i=>allData[i]);
   const data    = sortData(rawData);
   document.getElementById('tblCount').textContent='총 '+data.length+'건'+(sortField?` · ${sortField} ${sortDir==='asc'?'▲':'▼'}`:'');
-  if(!data.length){tb.innerHTML='<tr><td colspan="16" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';applyTableColOrder();return;}
+
+  // 용역(용역구분) 필터가 "컨테이너운송" 단독으로 지정된 경우, 컨테이너운송 전용 컬럼(노란 음영) 표시
+  const ctnFilter = colFilters['용역구분'];
+  const showCtn = !!(ctnFilter && ctnFilter.size===1 && ctnFilter.has('컨테이너운송'));
+  const mainTableEl = document.getElementById('mainTable');
+  if (mainTableEl) mainTableEl.classList.toggle('show-ctn-cols', showCtn);
+
+  if(!data.length){tb.innerHTML='<tr><td colspan="100%" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';applyTableColOrder();return;}
   const limit = tableShowAll ? data.length : 200;
   const shown = data.slice(0, limit);
   // 합계 행 (필터된 전체 기준)
   const tRev = data.reduce((s,r)=>s+(+r['매출(원)']||0),0);
   const tCost= data.reduce((s,r)=>s+(+r['하불(원)']||0),0);
   const tCI  = data.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0);
+  const tBilling = data.reduce((s,r)=>s+(+r['청구금액']||0),0);
   const totalRow = `<tr style="background:var(--teal-ll);font-weight:800;">
     <td style="color:var(--navy);white-space:nowrap;">합계 ${data.length}건</td>
     <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
@@ -3626,6 +3675,9 @@ function renderTable() {
     <td class="num" style="color:var(--green);">${fmt(tCI)}</td>
     <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
     <td></td><td></td><td></td>
+    <td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td>
+    <td class="col-ctn-extra num" style="color:var(--navy);">${tBilling?fmt(tBilling):''}</td>
+    <td class="col-ctn-extra"></td><td class="col-ctn-extra"></td>
   </tr>`;
   tb.innerHTML = totalRow + shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
@@ -3644,16 +3696,24 @@ function renderTable() {
     <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['비고']||''}">${r['비고']||'—'}</td>
     <td style="overflow:hidden;text-overflow:ellipsis;font-size:10.5px;color:var(--teal);font-weight:600;" title="${r['_uploader']||''}">${r['_uploader']||'—'}</td>
     <td><button onclick="deleteRow(${i})" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:3px 5px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700;">삭제</button></td>
+    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['추가협력사']||''}">${r['추가협력사']||'—'}</td>
+    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['작업화주명']||''}">${r['작업화주명']||'—'}</td>
+    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
+    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['할증명']||''}">${r['할증명']||'—'}</td>
+    <td class="col-ctn-extra mono" style="text-align:center;">${r['SZ']||'—'}</td>
+    <td class="col-ctn-extra num">${r['청구금액']?fmt(r['청구금액']):'—'}</td>
+    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['청구화주']||''}">${r['청구화주']||'—'}</td>
+    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
   </tr>`).join('');
   if(!tableShowAll && data.length > 200) {
-    tb.innerHTML += `<tr><td colspan="16" style="text-align:center;padding:14px;">
+    tb.innerHTML += `<tr><td colspan="100%" style="text-align:center;padding:14px;">
       <button onclick="tableShowAll=true;renderTable();" style="border:none;border-radius:8px;background:var(--teal);color:#fff;padding:9px 28px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
         📋 전체 보기 (${data.length}건 모두 표시)
       </button>
       <div style="font-size:11px;color:var(--gray400);margin-top:6px;">현재 200건 표시 중</div>
     </td></tr>`;
   } else if(tableShowAll && data.length > 200) {
-    tb.innerHTML += `<tr><td colspan="16" style="text-align:center;padding:10px;">
+    tb.innerHTML += `<tr><td colspan="100%" style="text-align:center;padding:10px;">
       <button onclick="tableShowAll=false;renderTable();" style="border:none;border-radius:8px;background:var(--gray100);color:var(--gray500);padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
         접기 (200건으로 줄이기)
       </button>
@@ -4576,10 +4636,10 @@ async function aiMap(headers, sampleRows){
 원본 컬럼: ${JSON.stringify(headers)}
 샘플 (5행): ${JSON.stringify(sampleRows.slice(0,5),null,2)}
 
-매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/청구/수입), 하불(원)(하불/원가/지급/비용), 용역구분(서비스종류), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination)
+매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/청구/수입), 하불(원)(하불/원가/지급/비용), 용역구분(서비스종류), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), 추가협력사(추가 협력사), 작업화주명(작업 화주), 세부용역(용역), 할증명(할증), SZ(SZ/규격/size), 청구금액(청구 금액), 청구화주(청구 화주), 하차지(하차 지)
 
 JSON만 응답:
-{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null}`;
+{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null,"추가협력사":null,"작업화주명":null,"세부용역":null,"할증명":null,"SZ":null,"청구금액":null,"청구화주":null,"하차지":null}`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -4620,6 +4680,15 @@ function ruleMap(headers){
     '청구요율구분': exact(['청구 요율구분','청구요율구분'])||find(['요율구분','청구요율','rate']),
     '출발지':       exact(['출발지'])||find(['출발','origin','from지','출발지']),
     '도착지':       exact(['도착지'])||find(['도착','destination','to지','도착지']),
+    // 컨테이너운송 전용 필드
+    '추가협력사':   exact(['추가협력사'])||find(['추가협력사','추가 협력사']),
+    '작업화주명':   exact(['작업화주명'])||find(['작업화주','작업 화주']),
+    '세부용역':     exact(['용역'])||find(['용역']),
+    '할증명':       exact(['할증명'])||find(['할증']),
+    'SZ':           exact(['SZ'])||find(['sz','규격','size']),
+    '청구금액':     exact(['청구금액'])||find(['청구금액','청구 금액']),
+    '청구화주':     exact(['청구화주'])||find(['청구화주','청구 화주']),
+    '하차지':       exact(['하차지'])||find(['하차지','하차 지']),
   };
 }
 
@@ -4672,6 +4741,10 @@ function extract(rows,map,year,month,branch){
       '계약기간_시작':fd2(map['계약기간_시작']?row[map['계약기간_시작']]:''),
       '계약기간_종료':fd2(map['계약기간_종료']?row[map['계약기간_종료']]:''),
       '계약상태':g('계약상태')||'진행중','비고':g('비고'),
+      '추가협력사':g('추가협력사'),'작업화주명':g('작업화주명'),
+      '세부용역':g('세부용역'),'할증명':g('할증명'),
+      'SZ':g('SZ'),'청구금액':gn('청구금액')||'',
+      '청구화주':g('청구화주'),'하차지':g('하차지'),
     };
   }).filter(Boolean);
 }
