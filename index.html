@@ -560,9 +560,6 @@ td.bold { font-weight: 700; color: var(--navy); }
   color: var(--navy); outline: none;
 }
 .finp:focus { border-color: var(--teal); }
-/* 컨테이너운송 전용 컬럼: 용역 필터=컨테이너운송일 때만 노출 */
-.col-ctn-extra { display: none; }
-.show-ctn-cols .col-ctn-extra { display: table-cell; }
 .rate-combo-box {
   display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px;
   background: #fff; border: 1px solid var(--gray200); border-radius: 10px;
@@ -1245,7 +1242,8 @@ td.bold { font-weight: 700; color: var(--navy); }
             <col style="width:70px">   <!-- 용역 -->
             <col style="width:75px">   <!-- 출발지 -->
             <col style="width:75px">   <!-- 도착지 -->
-            <col style="width:50px">   <!-- 톤급 -->
+            <col style="width:75px">   <!-- 하차지 -->
+            <col style="width:50px">   <!-- SZ(톤급) -->
             <col style="width:50px">   <!-- 중량 -->
             <col style="width:100px">  <!-- 매출(원) -->
             <col style="width:100px">  <!-- 하불(원) -->
@@ -1254,10 +1252,6 @@ td.bold { font-weight: 700; color: var(--navy); }
             <col style="width:82px">   <!-- S/O명 -->
             <col style="width:62px">   <!-- 업로더 -->
             <col style="width:30px">   <!-- 관리 -->
-            <!-- 컨테이너운송 전용 (용역 필터=컨테이너운송 일 때만 표시) -->
-            <col class="col-ctn-extra" style="width:90px">   <!-- 용역명 -->
-            <col class="col-ctn-extra" style="width:50px">   <!-- SZ -->
-            <col class="col-ctn-extra" style="width:90px">   <!-- 하차지 -->
           </colgroup>
           <thead id="tblHead" oncontextmenu="openColCtxTable(event)">
             <tr>
@@ -1268,7 +1262,8 @@ td.bold { font-weight: 700; color: var(--navy); }
               <th><div class="th-inner">용역<button class="col-filter-btn" onclick="openColFilter(event,'용역구분')">▾</button></div></th>
               <th><div class="th-inner">출발지<button class="col-filter-btn" onclick="openColFilter(event,'출발지')">▾</button></div></th>
               <th><div class="th-inner">도착지<button class="col-filter-btn" onclick="openColFilter(event,'도착지')">▾</button></div></th>
-              <th><div class="th-inner">톤급<button class="col-filter-btn" onclick="openColFilter(event,'톤급')">▾</button></div></th>
+              <th><div class="th-inner">하차지<button class="col-filter-btn" onclick="openColFilter(event,'하차지')">▾</button></div></th>
+              <th><div class="th-inner">SZ<button class="col-filter-btn" onclick="openColFilter(event,'톤급')">▾</button></div></th>
               <th><div class="th-inner">중량<button class="col-filter-btn" onclick="openColFilter(event,'중량')">▾</button><button class="col-sort-btn" onclick="setSort('중량',this)">↕</button></div></th>
               <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">매출(원)<button class="col-sort-btn" onclick="setSort('매출(원)',this)">↕</button></div></th>
               <th style="text-align:right"><div class="th-inner" style="justify-content:flex-end">하불(원)<button class="col-sort-btn" onclick="setSort('하불(원)',this)">↕</button></div></th>
@@ -1277,10 +1272,6 @@ td.bold { font-weight: 700; color: var(--navy); }
               <th><div class="th-inner">S/O명<button class="col-filter-btn" onclick="openColFilter(event,'비고')">▾</button></div></th>
               <th><div class="th-inner">업로더<button class="col-filter-btn" onclick="openColFilter(event,'_uploader')">▾</button></div></th>
               <th></th>
-              <!-- 컨테이너운송 전용 -->
-              <th class="col-ctn-extra">용역명</th>
-              <th class="col-ctn-extra">SZ</th>
-              <th class="col-ctn-extra">하차지</th>
             </tr>
           </thead>
           <tbody id="tblBody">
@@ -1654,9 +1645,7 @@ const COLS = ['연도','월','지사','협력사명','고객(화주)','용역구
               '매출(원)','하불(원)','공헌이익(원)','공헌이익률',
               '톤급','중량','청구요율구분','출발지','도착지',
               '물량(건/톤)','계약기간_시작','계약기간_종료','계약상태','비고',
-              '세부용역','SZ','하차지'];
-// 컨테이너운송 전용 추가 컬럼 (전체데이터 표에서 용역=컨테이너운송일 때만 표시)
-const CTN_EXTRA_COLS = ['세부용역','SZ','하차지'];
+              'SZ','하차지'];
 const CATKEYS = {
   '컨테이너운송':['컨테이너','container','ctn','fcl','lcl','컨운','컨헤','컨테'],
   '벌크운송':    ['벌크','bulk','bulk 육송','육송','화물운송','일반운송','평판','카고'],
@@ -2456,7 +2445,6 @@ function rowToDb(r) {
     contract_start:String(r['계약기간_시작']||''), contract_end:String(r['계약기간_종료']||''),
     contract_status:String(r['계약상태']||''), note:String(r['비고']||''),
     uploader:r['_uploader']||'',
-    service_detail:String(r['세부용역']||''),
     sz_code:String(r['SZ']||''), drop_point:String(r['하차지']||''),
   };
 }
@@ -2472,7 +2460,6 @@ function dbToRow(d) {
     '청구요율구분':d.billing_rate_type, '출발지':d.departure, '도착지':d.destination,
     '물량(건/톤)':d.volume, '계약기간_시작':d.contract_start, '계약기간_종료':d.contract_end,
     '계약상태':d.contract_status, '비고':d.note,
-    '세부용역':d.service_detail||'',
     'SZ':d.sz_code||'', '하차지':d.drop_point||'',
   };
 }
@@ -3507,7 +3494,7 @@ function resetTableFilters() {
 // ══════════════════════════════════════════════════════
 // 전체데이터 열 순서 드래그 변경
 // ══════════════════════════════════════════════════════
-const TBL_COL_COUNT = 16;
+const TBL_COL_COUNT = 17;
 let colOrder = [...Array(TBL_COL_COUNT).keys()];
 let _origThs = null, _origCols = null, _colDragReady = false;
 try { const sv=JSON.parse(localStorage.getItem('tblColOrder')||'null');
@@ -3636,12 +3623,6 @@ function renderTable() {
   const data    = sortData(rawData);
   document.getElementById('tblCount').textContent='총 '+data.length+'건'+(sortField?` · ${sortField} ${sortDir==='asc'?'▲':'▼'}`:'');
 
-  // 용역(용역구분) 필터가 "컨테이너운송" 단독으로 지정된 경우, 컨테이너운송 전용 컬럼(노란 음영) 표시
-  const ctnFilter = colFilters['용역구분'];
-  const showCtn = !!(ctnFilter && ctnFilter.size===1 && ctnFilter.has('컨테이너운송'));
-  const mainTableEl = document.getElementById('mainTable');
-  if (mainTableEl) mainTableEl.classList.toggle('show-ctn-cols', showCtn);
-
   if(!data.length){tb.innerHTML='<tr><td colspan="100%" style="text-align:center;padding:36px;color:var(--gray400);">조건에 맞는 데이터 없음</td></tr>';applyTableColOrder();return;}
   const limit = tableShowAll ? data.length : 200;
   const shown = data.slice(0, limit);
@@ -3651,13 +3632,12 @@ function renderTable() {
   const tCI  = data.reduce((s,r)=>s+(+r['공헌이익(원)']||0),0);
   const totalRow = `<tr style="background:var(--teal-ll);font-weight:800;">
     <td style="color:var(--navy);white-space:nowrap;">합계 ${data.length}건</td>
-    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
     <td class="num" style="color:var(--navy);">${fmt(tRev)}</td>
     <td class="num" style="color:var(--navy);">${fmt(tCost)}</td>
     <td class="num" style="color:var(--green);">${fmt(tCI)}</td>
     <td class="num"><span class="badge b-green">${pct(tCI,tRev)}</span></td>
     <td></td><td></td><td></td>
-    <td class="col-ctn-extra"></td><td class="col-ctn-extra"></td><td class="col-ctn-extra"></td>
   </tr>`;
   tb.innerHTML = totalRow + shown.map((r,i)=>`<tr>
     <td><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
@@ -3667,7 +3647,8 @@ function renderTable() {
     <td><span class="badge ${bc(r['용역구분'])}">${r['용역구분']||'—'}</span></td>
     <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['출발지']||''}">${r['출발지']||'—'}</td>
     <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['도착지']||''}">${r['도착지']||'—'}</td>
-    <td class="mono" style="text-align:center;overflow:hidden;text-overflow:ellipsis;">${r['톤급']||'—'}</td>
+    <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
+    <td class="mono" style="text-align:center;overflow:hidden;text-overflow:ellipsis;">${(r['용역구분']==='컨테이너운송'?r['SZ']:r['톤급'])||'—'}</td>
     <td class="num">${r['중량']||'—'}</td>
     <td class="num">${r['매출(원)']?fmt(r['매출(원)']):'—'}</td>
     <td class="num" style="font-weight:700;">${r['하불(원)']?fmt(r['하불(원)']):'—'}</td>
@@ -3676,9 +3657,6 @@ function renderTable() {
     <td style="overflow:hidden;text-overflow:ellipsis;" title="${r['비고']||''}">${r['비고']||'—'}</td>
     <td style="overflow:hidden;text-overflow:ellipsis;font-size:10.5px;color:var(--teal);font-weight:600;" title="${r['_uploader']||''}">${r['_uploader']||'—'}</td>
     <td><button onclick="deleteRow(${i})" style="border:none;background:var(--red-l);color:var(--red);border-radius:4px;padding:3px 5px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700;">삭제</button></td>
-    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
-    <td class="col-ctn-extra mono" style="text-align:center;">${r['SZ']||'—'}</td>
-    <td class="col-ctn-extra" style="overflow:hidden;text-overflow:ellipsis;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
   </tr>`).join('');
   if(!tableShowAll && data.length > 200) {
     tb.innerHTML += `<tr><td colspan="100%" style="text-align:center;padding:14px;">
@@ -4611,12 +4589,10 @@ async function aiMap(headers, sampleRows){
 원본 컬럼: ${JSON.stringify(headers)}
 샘플 (5행): ${JSON.stringify(sampleRows.slice(0,5),null,2)}
 
-매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/수입/운임), 하불(원)(하불/원가/지급/비용), 용역구분(용역 대분류/서비스종류, 예: 컨테이너운송·벌크운송), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), 세부용역(용역구분과는 별개의 '용역' 상세 항목 컬럼, 컨테이너운송 전용), SZ(SZ/규격/size), 하차지(하차 지)
-
-주의: 용역구분과 세부용역은 서로 다른 컬럼이면 별도로 매핑하세요.
+매핑 대상: 협력사명(협력사/업체/거래처/vendor), 고객(화주)(화주/고객/발주처), 매출(원)(매출/수입/운임), 하불(원)(하불/원가/지급/비용), 용역구분(용역 대분류/서비스종류, 예: 컨테이너운송·벌크운송), 계약유형(입찰/수의/갱신), 물량(건/톤)(수량/건수/톤), 계약기간_시작(시작일/하불일자), 계약기간_종료(종료일/확정일자/마감일자), 계약상태(상태/하불상태), 비고(메모/S/O명), 톤급(차량톤급, 벌크운송 전용), 중량(무게/weight), 청구요율구분(청구 요율구분/요율구분), 출발지(출발/origin), 도착지(도착/destination), SZ(SZ/규격/size, 컨테이너운송 전용), 하차지(하차 지)
 
 JSON만 응답:
-{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null,"세부용역":null,"SZ":null,"하차지":null}`;
+{"협력사명":null,"고객(화주)":null,"매출(원)":null,"하불(원)":null,"용역구분":null,"계약유형":null,"물량(건/톤)":null,"계약기간_시작":null,"계약기간_종료":null,"계약상태":null,"비고":null,"톤급":null,"중량":null,"청구요율구분":null,"출발지":null,"도착지":null,"SZ":null,"하차지":null}`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -4640,8 +4616,6 @@ function ruleMap(headers){
   const find=kws=>headers.find(h=>kws.some(k=>lc(h).includes(lc(k))))||null;
   // 정확한 컬럼명 우선 매칭
   const exact=kws=>headers.find(h=>kws.some(k=>h.trim()===k||lc(h)===lc(k)))||null;
-  // '용역구분'과 겹치지 않는 '용역' 단독 컬럼만 찾기 (세부용역용)
-  const findPlain=kws=>headers.find(h=>!lc(h).includes('구분')&&kws.some(k=>lc(h).includes(lc(k))))||null;
   return {
     '협력사명':     exact(['협력사명'])||find(['협력사','업체','거래처','vendor','partner']),
     '고객(화주)':   exact(['고객(화주)','고객','화주'])||find(['화주','고객','발주처','작업화주','청구화주명']),
@@ -4660,7 +4634,6 @@ function ruleMap(headers){
     '출발지':       exact(['출발지'])||find(['출발','origin','from지','출발지']),
     '도착지':       exact(['도착지'])||find(['도착','destination','to지','도착지']),
     // 컨테이너운송 전용 필드
-    '세부용역':     exact(['용역','세부용역'])||findPlain(['용역']),
     'SZ':           exact(['SZ'])||find(['sz','규격','size']),
     '하차지':       exact(['하차지'])||find(['하차지','하차 지']),
   };
@@ -4715,7 +4688,7 @@ function extract(rows,map,year,month,branch){
       '계약기간_시작':fd2(map['계약기간_시작']?row[map['계약기간_시작']]:''),
       '계약기간_종료':fd2(map['계약기간_종료']?row[map['계약기간_종료']]:''),
       '계약상태':g('계약상태')||'진행중','비고':g('비고'),
-      '세부용역':g('세부용역'),'SZ':g('SZ'),'하차지':g('하차지'),
+      'SZ':g('SZ'),'하차지':g('하차지'),
     };
   }).filter(Boolean);
 }
@@ -4760,22 +4733,13 @@ function renderPreview(rows){
   const area=document.getElementById('previewArea');
   if(!rows.length){area.innerHTML='<div class="empty"><div class="ei">🔍</div><p>추출 데이터 없음</p></div>';return;}
   const limit = previewShowAll ? rows.length : 100;
-  // 업로드 데이터 중 컨테이너운송 건이 있으면 전용 컬럼(노란 음영) 표시
-  const showCtn = rows.some(r=>r['용역구분']==='컨테이너운송');
-  const ctnTh = `
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">용역명</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">SZ</th>
-      <th class="col-ctn-extra" style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">하차지</th>`;
   // 전체데이터와 동일한 컬럼 구성 (상태 열 제외)
-  area.innerHTML=`<div class="tbl-wrap"><table style="table-layout:fixed;min-width:940px;" class="${showCtn?'show-ctn-cols':''}">
+  area.innerHTML=`<div class="tbl-wrap"><table style="table-layout:fixed;min-width:940px;">
     <colgroup>
       <col style="width:52px"><col style="width:50px"><col style="width:115px"><col style="width:105px">
-      <col style="width:74px"><col style="width:80px"><col style="width:80px"><col style="width:55px">
-      <col style="width:55px"><col style="width:105px"><col style="width:105px"><col style="width:105px">
-      <col style="width:60px"><col style="width:90px"><col style="width:42px">
-      <col class="col-ctn-extra" style="width:90px">
-      <col class="col-ctn-extra" style="width:50px">
-      <col class="col-ctn-extra" style="width:90px">
+      <col style="width:74px"><col style="width:80px"><col style="width:80px"><col style="width:75px">
+      <col style="width:55px"><col style="width:55px"><col style="width:105px"><col style="width:105px">
+      <col style="width:105px"><col style="width:60px"><col style="width:90px"><col style="width:42px">
     </colgroup>
     <thead><tr style="background:var(--navy);">
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">지사</th>
@@ -4785,14 +4749,15 @@ function renderPreview(rows){
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">용역</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">출발지</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">도착지</th>
-      <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">톤급</th>
+      <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">하차지</th>
+      <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">SZ</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">중량</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">매출(원)</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">하불(원)</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">공헌이익</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:right;">이익률</th>
       <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;">S/O명</th>
-      <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:center;">삭제</th>${ctnTh}
+      <th style="padding:8px 6px;color:rgba(255,255,255,.75);font-size:10px;font-weight:700;white-space:nowrap;text-align:center;">삭제</th>
     </tr></thead>
     <tbody>${rows.slice(0,limit).map((r,i)=>`<tr style="border-bottom:1px solid var(--gray100);">
       <td style="padding:7px 6px;white-space:nowrap;overflow:hidden;"><span class="badge ${bc(r['지사'])}">${(r['지사']||'—').replace('지사','')}</span></td>
@@ -4802,7 +4767,8 @@ function renderPreview(rows){
       <td style="padding:7px 6px;"><span class="badge ${bc(r['용역구분'])}">${r['용역구분']||'—'}</span></td>
       <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['출발지']||''}">${r['출발지']||'—'}</td>
       <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['도착지']||''}">${r['도착지']||'—'}</td>
-      <td style="padding:7px 6px;font-family:'DM Mono';text-align:center;white-space:nowrap;">${r['톤급']||'—'}</td>
+      <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
+      <td style="padding:7px 6px;font-family:'DM Mono';text-align:center;white-space:nowrap;">${(r['용역구분']==='컨테이너운송'?r['SZ']:r['톤급'])||'—'}</td>
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--navy);white-space:nowrap;">${r['중량']||'—'}</td>
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:600;color:var(--navy);white-space:nowrap;">${r['매출(원)']?fmt(r['매출(원)']):'—'}</td>
       <td style="padding:7px 6px;text-align:right;font-family:'DM Mono';font-weight:700;color:var(--navy);white-space:nowrap;">${r['하불(원)']?fmt(r['하불(원)']):'—'}</td>
@@ -4810,9 +4776,6 @@ function renderPreview(rows){
       <td style="padding:7px 6px;text-align:right;white-space:nowrap;"><span class="badge b-green">${r['공헌이익률']||'—'}</span></td>
       <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['비고']||''}">${r['비고']||'—'}</td>
       <td style="padding:7px 6px;text-align:center;"><button onclick="deletePreviewRow(${i})" title="이 행 삭제" style="background:none;border:none;cursor:pointer;color:var(--red,#e5484d);font-size:14px;font-weight:800;line-height:1;padding:2px 4px;">✕</button></td>
-      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['세부용역']||''}">${r['세부용역']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;font-family:'DM Mono';text-align:center;white-space:nowrap;">${r['SZ']||'—'}</td>
-      <td class="col-ctn-extra" style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['하차지']||''}">${r['하차지']||'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>
   ${(rows.length>100 && !previewShowAll)?`<div style="text-align:center;margin-top:8px;">
@@ -4885,6 +4848,6 @@ _sb.auth.onAuthStateChange((event, sess) => {
   runAccessCheck(sess?.user || null);
 });
 </script>
-<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v11</div>
+<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v12</div>
 </body>
 </html>
