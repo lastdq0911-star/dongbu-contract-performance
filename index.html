@@ -4070,7 +4070,7 @@ async function runAnalysis(){
 
     const wb = await readXlsx(upFile);
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(ws,{defval:''});
+    const raw = sheetToRows(ws);
     const headers = raw.length?Object.keys(raw[0]):[];
     log(`${wb.SheetNames[0]} · ${raw.length}행 · ${headers.length}컬럼`,'ok');
     log('컬럼: '+headers.slice(0,6).join(', ')+(headers.length>6?'…':''),'info');
@@ -4580,6 +4580,30 @@ function readXlsx(f){
   });
 }
 
+// 시트 상단에 제목/안내 행이 있는 경우를 대비해, 실제 컬럼명이 있는 행을
+// 자동으로 찾아 헤더로 사용 (제목행/빈행을 건너뜀)
+const HEADER_HINT_KWS = ['협력사','업체','거래처','고객','화주','청구처','발주처',
+  '매출','청구','수입','운임','하불','비용','원가','용역','서비스','구분',
+  '계약','물량','수량','건수','중량','톤급','출발','도착','요율','비고','메모',
+  'sz','규격','상태','일자','날짜','date'];
+function sheetToRows(ws){
+  if(!ws['!ref']) return [];
+  const aoa = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(!aoa.length) return [];
+  const lc=v=>String(v??'').toLowerCase().replace(/[\s_\-()]/g,'');
+  let bestIdx=0, bestScore=-1;
+  for(let i=0;i<Math.min(aoa.length,10);i++){
+    const row=aoa[i];
+    const nonEmpty=row.filter(c=>String(c??'').trim()!=='').length;
+    if(nonEmpty<2) continue;
+    const score=row.reduce((s,c)=>s+(HEADER_HINT_KWS.some(k=>lc(c).includes(k))?1:0),0);
+    if(score>bestScore){ bestScore=score; bestIdx=i; }
+  }
+  const range=XLSX.utils.decode_range(ws['!ref']);
+  range.s.r=bestIdx;
+  return XLSX.utils.sheet_to_json(ws,{defval:'',range});
+}
+
 // ══════════════════════════════════════════════════════
 // AI MAPPING
 // ══════════════════════════════════════════════════════
@@ -4850,6 +4874,6 @@ _sb.auth.onAuthStateChange((event, sess) => {
   runAccessCheck(sess?.user || null);
 });
 </script>
-<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v13</div>
+<div style="position:fixed;right:6px;bottom:4px;font-size:9px;color:#ccc;opacity:.5;pointer-events:none;z-index:1;">v14</div>
 </body>
 </html>
